@@ -1,0 +1,41 @@
+{
+  "name": "opspilot-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^6.22.3",
+    "@tanstack/react-query": "^5.28.9",
+    "zustand": "^4.5.2",
+    "reactflow": "^11.11.2",
+    "recharts": "^2.12.3",
+    "axios": "^1.6.8",
+    "lucide-react": "^0.364.0",
+    "date-fns": "^3.6.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.2",
+    "react-dropzone": "^14.2.3",
+    "react-hot-toast": "^2.4.1",
+    "react-markdown": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.2.1",
+    "oxlint": "^1.71.0",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "tailwindcss": "^3.4.3",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19"
+  }
+}

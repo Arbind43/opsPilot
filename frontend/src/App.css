@@ -1,0 +1,47 @@
+/* App-level overrides — all global styles are in index.css */
+
+/* ReactFlow dark theme overrides */
+.react-flow__attribution {
+  background: rgba(10, 15, 35, 0.7) !important;
+  color: #475569 !important;
+  border-radius: 8px !important;
+}
+
+.react-flow__edge-text {
+  font-family: 'Inter', sans-serif !important;
+}
+
+.react-flow__controls-button {
+  background: rgba(10, 15, 35, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+  fill: #94a3b8 !important;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(99, 155, 255, 0.15) !important;
+  color: #60a5fa !important;
+  fill: #60a5fa !important;
+}
+
+/* Prose dark mode overrides */
+.prose.prose-invert {
+  --tw-prose-body: #cbd5e1;
+  --tw-prose-headings: #f1f5f9;
+  --tw-prose-bold: #e2e8f0;
+  --tw-prose-code: #93c5fd;
+  --tw-prose-bullets: #475569;
+  --tw-prose-links: #60a5fa;
+}
+
+/* React Markdown inside chat bubbles */
+.prose-sm p { margin-top: 0.4em; margin-bottom: 0.4em; }
+.prose-sm ul { margin-top: 0.4em; margin-bottom: 0.4em; }
+.prose-sm li { margin-top: 0.2em; margin-bottom: 0.2em; }
+.prose-sm pre { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; }
+.prose-sm code:not(pre code) {
+  background: rgba(99, 155, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.8em;
+}

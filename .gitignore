@@ -1,0 +1,61 @@
+# ──────────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.env
+*.log
+
+# ──────────────────────────────────────────────
+# Node / Frontend
+# ──────────────────────────────────────────────
+node_modules/
+.pnp.*
+.yarn/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# ──────────────────────────────────────────────
+# IDE
+# ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ──────────────────────────────────────────────
+# Docker
+# ──────────────────────────────────────────────
+docker-compose.override.yml
+
+# ──────────────────────────────────────────────
+# Project-specific
+# ──────────────────────────────────────────────
+uploads/
+storage/
+*.db
+*.sqlite3
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+
+# Secrets
+.env
+.env.local
+.env.production
+backend/.env
+frontend/.env
+ai/.env
