@@ -130,13 +130,12 @@ async def retry_document(
         raise HTTPException(status_code=404, detail="Document not found")
     if doc.processing_status == "completed":
         raise HTTPException(status_code=400, detail="Document is already completed")
-    # Reset to pending and re-trigger
-    from beanie.operators import Set
+    # Reset status using correct raw $set syntax
     from app.models.document import Document
     import uuid
-    db_doc = await Document.find_one(Document.id == uuid.UUID(str(doc_id)))
-    if db_doc:
-        await db_doc.update(Set({"processing_status": "pending", "processing_error": None}))
+    await Document.find_one(Document.id == uuid.UUID(str(doc_id))).update(
+        {"$set": {"processing_status": "pending", "processing_error": None}}
+    )
     background_tasks.add_task(service._process_in_background, str(doc_id), doc.file_path)
     return await service.get_document(doc_id)
 

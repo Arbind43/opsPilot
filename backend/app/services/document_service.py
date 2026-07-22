@@ -106,7 +106,6 @@ class DocumentService:
     async def _process_in_background(self, document_id: str, file_path: str):
         import logging
         import uuid as _uuid
-        from beanie.operators import Set
         from ai.pipeline.orchestrator import PipelineOrchestrator
         from app.models.document import Document
         _logger = logging.getLogger(__name__)
@@ -114,18 +113,34 @@ class DocumentService:
         doc_uuid = _uuid.UUID(document_id)
 
         async def _set_status(status: str, error: str | None = None):
-            doc = await Document.find_one(Document.id == doc_uuid)
-            if doc:
-                update_data = {"processing_status": status}
+            """Update document status using correct Beanie raw-dict $set syntax."""
+            try:
+                update_data: dict = {"processing_status": status}
                 if error:
                     update_data["processing_error"] = error[:500]
-                await doc.update(Set(update_data))
+                # Use raw MongoDB $set — works reliably on both instance and query
+                await Document.find_one(Document.id == doc_uuid).update(
+                    {"$set": update_data}
+                )
+                _logger.info(f"Document {document_id} status -> {status}")
+            except Exception as upd_err:
+                _logger.error(f"Status update failed for {document_id}: {upd_err}")
 
         try:
             await _set_status("processing")
+
+            # Guard: file might not exist on cloud (ephemeral storage)
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(
+                    f"Uploaded file missing at '{file_path}'. "
+                    "Cloud storage may be ephemeral — please re-upload the document."
+                )
+
             orchestrator = PipelineOrchestrator()
             await orchestrator.process_document(document_id, file_path)
             await _set_status("completed")
+
         except Exception as e:
             _logger.error(f"Background processing failed for {document_id}: {e}")
             await _set_status("failed", str(e))
+
