@@ -158,8 +158,28 @@ export default function Settings() {
               <CardTitle className="text-sm">Workspace General Settings</CardTitle>
               <CardDescription className="text-xs">Configure your organization's core operating parameters.</CardDescription>
             </CardHeader>
-            <CardContent className="pt-5">
-              <p className="text-sm text-slate-500">Settings panel configuration coming soon.</p>
+            <CardContent className="pt-5 space-y-6">
+              <div className="space-y-4 max-w-md">
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Workspace Name</label>
+                  <input type="text" defaultValue="OpsPilot Default Workspace" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500/50 transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Primary Notification Email</label>
+                  <input type="email" defaultValue="admin@opspilot.internal" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500/50 transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Timezone</label>
+                  <select className="w-full bg-[#151c2f] border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500/50 transition-colors">
+                    <option>UTC (Coordinated Universal Time)</option>
+                    <option>PST (Pacific Standard Time)</option>
+                    <option>EST (Eastern Standard Time)</option>
+                  </select>
+                </div>
+                <button className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+                  Save Changes
+                </button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -167,12 +187,66 @@ export default function Settings() {
         {/* Users */}
         <TabsContent value="users" className="animate-fade-in">
           <Card>
-            <CardHeader className="border-b border-white/[0.06]">
-              <CardTitle className="text-sm">User Management</CardTitle>
-              <CardDescription className="text-xs">Manage team members, roles, and access permissions.</CardDescription>
+            <CardHeader className="border-b border-white/[0.06] flex flex-row items-center justify-between pb-4">
+              <div>
+                <CardTitle className="text-sm">User Management</CardTitle>
+                <CardDescription className="text-xs mt-0.5">Manage team members, roles, and access permissions.</CardDescription>
+              </div>
+              <button className="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-white/10 flex items-center gap-2">
+                <Users size={12} /> Invite User
+              </button>
             </CardHeader>
-            <CardContent className="pt-5">
-              <p className="text-sm text-slate-500">User management table coming soon.</p>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="data-table w-full">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Last Active</th>
+                      <th className="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { name: 'Priya Sharma', email: 'priya@opspilot.internal', role: 'admin', status: 'Active', last: '2 min ago' },
+                      { name: 'Rahul Gupta', email: 'rahul@opspilot.internal', role: 'engineer', status: 'Active', last: '15 min ago' },
+                      { name: 'Ananya Patel', email: 'ananya@opspilot.internal', role: 'viewer', status: 'Inactive', last: '3 days ago' },
+                    ].map((u, i) => (
+                      <tr key={i}>
+                        <td>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold text-slate-200">{u.name}</span>
+                            <span className="text-[10px] text-slate-500">{u.email}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`text-[10px] px-2 py-0.5 rounded border capitalize font-medium ${
+                            u.role === 'admin' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : 
+                            u.role === 'engineer' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
+                            'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          }`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`text-xs flex items-center gap-1.5 ${u.status === 'Active' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${u.status === 'Active' ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+                            {u.status}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="text-xs text-slate-400">{u.last}</span>
+                        </td>
+                        <td className="text-right">
+                          <button className="text-xs text-blue-400 hover:text-blue-300 transition-colors">Edit</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
