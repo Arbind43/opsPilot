@@ -1,16 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-// In production (Vercel), VITE_API_URL must be set to the Render backend URL,
-// e.g. https://opspilot-backend.onrender.com/api/v1
-// In development, the Vite proxy handles /api/v1 → http://localhost:8000
-const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+// Hardcoding the URL to bypass Vercel environment variable issues completely
+const API_BASE = 'https://opspilot-1-bwho.onrender.com/api/v1';
 
-if (import.meta.env.PROD && !import.meta.env.VITE_API_URL) {
+if (import.meta.env.PROD && !API_BASE) {
   console.error(
-    '[OpsPilot] VITE_API_URL is not set! ' +
-    'Set it in your Vercel project environment variables to your Render backend URL, ' +
-    'e.g. https://opspilot-backend.onrender.com/api/v1'
+    '[OpsPilot] Backend URL is missing!'
   );
 }
 
