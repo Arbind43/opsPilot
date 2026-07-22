@@ -77,8 +77,18 @@ class CopilotAgent:
             context_parts = []
             for i, item in enumerate(context_items, 1):
                 source = item.get("source", item.get("type", "Knowledge Base"))
+                metadata = item.get("metadata", {})
+                page = metadata.get("page_no")
+                section = metadata.get("section")
+                
+                meta_str = f"Source: {source}"
+                if page:
+                    meta_str += f", Page {page}"
+                if section:
+                    meta_str += f", Section '{section}'"
+                    
                 content = item.get("content", "")
-                context_parts.append(f"[{i}] ({source})\n{content}")
+                context_parts.append(f"[{i}] ({meta_str})\n{content}")
             context_text = "\n\n".join(context_parts)
         else:
             context_text = "No specific documents found in the knowledge base for this query."
@@ -126,8 +136,18 @@ class CopilotAgent:
             context_parts = []
             for i, item in enumerate(context_items, 1):
                 source = item.get("source", item.get("type", "Knowledge Base"))
+                metadata = item.get("metadata", {})
+                page = metadata.get("page_no")
+                section = metadata.get("section")
+                
+                meta_str = f"Source: {source}"
+                if page:
+                    meta_str += f", Page {page}"
+                if section:
+                    meta_str += f", Section '{section}'"
+                    
                 content = item.get("content", "")
-                context_parts.append(f"[{i}] ({source})\n{content}")
+                context_parts.append(f"[{i}] ({meta_str})\n{content}")
             context_text = "\n\n".join(context_parts)
         else:
             context_text = "No specific documents found in the knowledge base for this query."

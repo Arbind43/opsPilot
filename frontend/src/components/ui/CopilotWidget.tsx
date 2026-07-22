@@ -52,13 +52,26 @@ function SourcesPill({ context }: { context: any[] }) {
           {vectorSources.map((src, i) => (
             <div key={i} className="flex items-start gap-2 text-xs text-slate-500">
               <Database size={10} className="mt-0.5 text-blue-400 shrink-0" />
-              <div className="flex flex-col gap-1">
-                <span className="line-clamp-2 italic text-slate-400">"{src.content?.slice(0, 150)}..."</span>
-                {src.metadata?.document_id && (
-                  <a href="/documents" className="text-blue-400 font-medium hover:underline flex items-center gap-1 no-underline hover:no-underline">
-                    <BookOpen size={9} /> {src.metadata.file_name || 'Source'}
-                  </a>
-                )}
+              <div className="flex flex-col gap-1 w-full">
+                <span className="line-clamp-2 italic text-slate-400 text-[11px]">"{src.content?.slice(0, 150)}..."</span>
+                
+                <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                  {(src.metadata?.document_id || src.metadata?.file_name) && (
+                    <a href="/documents" className="text-blue-400 font-medium hover:underline flex items-center gap-1 no-underline hover:no-underline">
+                      <BookOpen size={9} /> {src.metadata.file_name || 'Source Document'}
+                    </a>
+                  )}
+                  {src.metadata?.page_no && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-white/5 rounded border border-white/10 text-slate-300">
+                      Page {src.metadata.page_no}
+                    </span>
+                  )}
+                  {src.metadata?.section && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-white/5 rounded border border-white/10 text-slate-300">
+                      § {src.metadata.section}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
