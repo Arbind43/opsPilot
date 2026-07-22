@@ -8,14 +8,25 @@ All values are loaded from environment variables with sensible defaults.
 from functools import lru_cache
 from typing import List
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Locate the .env file: it lives at the project root (opspilot/),
+# which is two directories above this config.py (backend/app/config.py).
+_HERE = Path(__file__).resolve()
+_ENV_FILE = next(
+    (str(p / ".env") for p in [_HERE.parents[1], _HERE.parents[2], _HERE.parents[3]]
+     if (p / ".env").exists()),
+    ".env",  # fallback — let pydantic-settings handle the missing file
+)
 
 
 class Settings(BaseSettings):
     """Application-wide configuration loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
