@@ -38,7 +38,19 @@ class PipelineOrchestrator:
     async def process_document(self, document_id: str, file_path: str) -> dict[str, Any]:
         """
         Run the full pipeline on a document.
+        Hard timeout of 3 minutes — never hangs forever.
         """
+        try:
+            return await asyncio.wait_for(
+                self._run_pipeline(document_id, file_path),
+                timeout=180.0  # 3 minutes max
+            )
+        except asyncio.TimeoutError:
+            logger.error("pipeline_timeout", document_id=document_id)
+            raise RuntimeError(f"Document processing timed out after 3 minutes")
+
+    async def _run_pipeline(self, document_id: str, file_path: str) -> dict[str, Any]:
+        """Internal pipeline execution."""
         logger.info("pipeline_start", document_id=document_id)
 
         # Step 1: OCR / Text Extraction (run in thread so it doesn't block event loop)

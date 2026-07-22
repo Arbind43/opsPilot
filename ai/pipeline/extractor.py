@@ -129,17 +129,22 @@ class KnowledgeExtractor:
             }
 
         # Chunk the full text into blocks of ~12000 chars (approx 3000 tokens)
+        # Cap at 3 blocks max to avoid rate limits on large docs
         chunk_size = 12000
-        text_blocks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
+        text_blocks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)][:3]
         
         chain = self._get_chain()
-        semaphore = asyncio.Semaphore(3) # Max 3 concurrent to stay well within TPM/RPM limits
+        semaphore = asyncio.Semaphore(2)  # Max 2 concurrent to stay well within TPM/RPM limits
 
         async def process_block(text_block):
             block_entities, block_relations = [], []
             async with semaphore:
                 try:
-                    raw = await chain.ainvoke({"text": text_block})
+                    # 25-second timeout — never hang forever on a slow/stalled API call
+                    raw = await asyncio.wait_for(
+                        chain.ainvoke({"text": text_block}),
+                        timeout=25.0
+                    )
                     raw = raw.strip()
                     if raw.startswith("```"):
                         raw = raw.split("```")[1]
@@ -148,6 +153,11 @@ class KnowledgeExtractor:
                     data = json.loads(raw)
                     block_entities.extend(data.get("entities", []))
                     block_relations.extend(data.get("relations", []))
+                except asyncio.TimeoutError:
+                    logger.warning("LLM call timed out after 25s, using heuristics.")
+                    fallback = self._heuristic_extraction(text_block)
+                    block_entities.extend(fallback.get("entities", []))
+                    block_relations.extend(fallback.get("relations", []))
                 except (json.JSONDecodeError, Exception) as e:
                     logger.warning(f"LLM extraction failed for block: {e}. Using heuristics.")
                     fallback = self._heuristic_extraction(text_block)
@@ -156,7 +166,7 @@ class KnowledgeExtractor:
             return block_entities, block_relations
 
         tasks = [process_block(block) for block in text_blocks]
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=False)
         
         for block_entities, block_relations in results:
             all_entities.extend(block_entities)
