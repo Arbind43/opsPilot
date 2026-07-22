@@ -5,10 +5,13 @@ Coordinates the full document processing pipeline:
 Upload → OCR → Layout Parsing → Entity Extraction → Chunking → Embedding → Graph Update
 """
 
+import asyncio
 import structlog
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor
 
 logger = structlog.get_logger()
+_thread_pool = ThreadPoolExecutor(max_workers=4)
 
 
 class PipelineOrchestrator:
@@ -38,20 +41,21 @@ class PipelineOrchestrator:
         """
         logger.info("pipeline_start", document_id=document_id)
 
-        # Step 1: OCR / Text Extraction
+        # Step 1: OCR / Text Extraction (run in thread so it doesn't block event loop)
         logger.info("pipeline_ocr_start", document_id=document_id)
-        raw_text = self._ocr.extract_text(file_path=file_path, file_type="")
+        loop = asyncio.get_event_loop()
+        raw_text = await loop.run_in_executor(_thread_pool, self._ocr.extract_text, file_path, "")
         logger.info("pipeline_ocr_complete", document_id=document_id, chars=len(raw_text))
 
-        # Step 2: Layout Parsing
+        # Step 2: Layout Parsing (fast, CPU-bound — also off the event loop)
         logger.info("pipeline_parsing_start", document_id=document_id)
-        parsed_doc = self._parser.parse(raw_text)
+        parsed_doc = await loop.run_in_executor(_thread_pool, self._parser.parse, raw_text)
         parsed_sections = parsed_doc.get("sections", [])
         logger.info("pipeline_parsing_complete", document_id=document_id, sections=len(parsed_sections))
 
-        # Step 3: Entity & Relation Extraction
+        # Step 3: Entity & Relation Extraction — call async directly, no thread overhead
         logger.info("pipeline_extraction_start", document_id=document_id)
-        graph_data = self._extractor.extract(parsed_doc)
+        graph_data = await self._extractor._extract_async(parsed_doc)
         entities = graph_data.get("entities", [])
         relations = graph_data.get("relations", [])
         logger.info("pipeline_extraction_complete", entities=len(entities), relations=len(relations))
