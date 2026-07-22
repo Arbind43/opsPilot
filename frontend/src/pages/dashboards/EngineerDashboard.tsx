@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import api from '@/lib/api';
 import {
   CheckCircle2, AlertTriangle, Box, FileText, TrendingUp,
-  Activity, ArrowUpRight, Zap, Cpu, Network, Shield,
-  ClipboardCheck, Wrench,
+  Activity, ArrowUpRight, Cpu, Network, Shield,
+  Wrench,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuthStore } from '@/store/authStore';
@@ -221,7 +221,7 @@ export default function EngineerDashboard() {
                 <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-3 rounded" />)}</div>
               ) : (
                 <div className="space-y-3">
-                  {activities.slice(0,4).map((a, idx) => (
+                  {activities.slice(0,4).map((a) => (
                     <div key={a.id} className="flex gap-2">
                       <div className="relative z-10 w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 mt-0.5">
                         <Activity size={8} className="text-blue-400" />

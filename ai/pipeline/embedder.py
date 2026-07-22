@@ -7,6 +7,8 @@ Generates vector embeddings for text chunks and stores them in ChromaDB.
 import logging
 from typing import List, Dict, Any
 
+from ai.fallbacks import local_vector_store
+
 logger = logging.getLogger(__name__)
 
 class VectorEmbedder:
@@ -14,13 +16,13 @@ class VectorEmbedder:
         self.collection_name = collection_name
         
         try:
-            from app.db.chroma_client import chroma_client
-            self.client = chroma_client
-            self.collection = self.client.get_or_create_collection(self.collection_name)
+            from app.db.pinecone_client import pinecone_client
+            self.client = pinecone_client
+            self.index = self.client.get_index()
         except ImportError:
-            logger.warning("chroma_client not available. Operating in stub mode.")
+            logger.warning("pinecone_client not available. Operating in stub mode.")
             self.client = None
-            self.collection = None
+            self.index = None
 
     async def embed_and_store(self, chunks: List[Dict[str, Any]], document_id: str) -> bool:
         """
@@ -29,44 +31,44 @@ class VectorEmbedder:
         if not chunks:
             return True
 
-        if not self.collection:
+        if not self.index:
             logger.warning("VectorEmbedder Stub: Would have embedded and stored chunks.")
+            local_vector_store.upsert(vectors=[{"id": f"{document_id}_fallback", "metadata": {"text": "demo fallback"}, "values": [0.0] * 32}])
             return False
             
         logger.info(f"Generating embeddings for {len(chunks)} chunks.")
 
-        ids = []
+        vectors = []
         documents = []
-        metadatas = []
 
         for chunk in chunks:
-            # We prefix the chunk ID with the document ID for global uniqueness
             chunk_id = f"{document_id}_{chunk['id']}"
-            ids.append(chunk_id)
             documents.append(chunk["text"])
             
-            # Merge document_id into metadata
             meta = chunk.get("metadata", {})
             meta["document_id"] = document_id
-            metadatas.append(meta)
+            # Pinecone requires storing the text inside metadata since it doesn't have a separate documents field
+            meta["text"] = chunk["text"]
+            
+            # Store temporarily without embedding, we'll add the embedding in the next step
+            vectors.append({
+                "id": chunk_id,
+                "metadata": meta
+            })
 
         try:
-            # 1. Generate embeddings using our configured LLM factory
             from ai.llm_factory import get_embedding_model
             embedder = get_embedding_model()
             
-            # Extract texts for embedding
-            texts_to_embed = [doc for doc in documents]
-            embeddings = await embedder.aembed_documents(texts_to_embed)
+            embeddings = await embedder.aembed_documents(documents)
 
-            # 2. Add to ChromaDB with explicit embeddings
-            self.collection.add(
-                ids=ids,
-                documents=documents,
-                metadatas=metadatas,
-                embeddings=embeddings
-            )
-            logger.info("Successfully stored embeddings in ChromaDB.")
+            # Zip the generated embeddings into the vector dictionaries
+            for i, vec in enumerate(vectors):
+                vec["values"] = embeddings[i]
+
+            # Upsert into Pinecone
+            self.index.upsert(vectors=vectors)
+            logger.info("Successfully stored embeddings in Pinecone.")
             return True
         except Exception as e:
             logger.error(f"Failed to store embeddings: {e}")

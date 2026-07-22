@@ -7,11 +7,10 @@ CRUD operations for industrial assets and asset hierarchy.
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_current_user_id, get_db
-from app.schemas.asset import AssetResponse, AssetCreate, AssetUpdate, AssetTreeNode
+from app.schemas.asset import AssetResponse, AssetCreate, AssetUpdate
 from app.services.asset_service import AssetService
+from app.dependencies import get_current_user_id
 import logging
 
 logger = logging.getLogger(__name__)
@@ -24,15 +23,14 @@ async def list_assets(
     page: int = 1,
     page_size: int = 20,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
+    service = AssetService()
     offset = (page - 1) * page_size
     items = await service.get_all_assets(offset=offset, limit=page_size)
     return {
-        "items": [AssetResponse.model_validate(asset).model_dump(mode='json') for asset in items],
+        "items": [AssetResponse.model_validate(asset).model_dump(mode="json") for asset in items],
         "page": page,
-        "page_size": page_size
+        "page_size": page_size,
     }
 
 
@@ -40,18 +38,16 @@ async def list_assets(
 async def create_asset(
     data: AssetCreate,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
+    service = AssetService()
     return await service.create_asset(data)
 
 
 @router.get("/tree", summary="Get asset hierarchy tree")
 async def get_asset_tree(
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
+    service = AssetService()
     tree = await service.get_asset_tree()
     return {"children": tree}
 
@@ -60,9 +56,8 @@ async def get_asset_tree(
 async def get_asset(
     asset_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
+    service = AssetService()
     asset = await service.get_asset(asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -74,9 +69,8 @@ async def update_asset(
     asset_id: UUID,
     data: AssetUpdate,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
+    service = AssetService()
     asset = await service.update_asset(asset_id, data)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -87,9 +81,8 @@ async def update_asset(
 async def delete_asset(
     asset_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
+    service = AssetService()
     success = await service.delete_asset(asset_id)
     if not success:
         raise HTTPException(status_code=404, detail="Asset not found")
@@ -100,9 +93,8 @@ async def delete_asset(
 async def get_asset_timeline(
     asset_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
+    service = AssetService()
     events = await service.get_timeline(asset_id)
     return {"events": events}
 
@@ -111,18 +103,17 @@ async def get_asset_timeline(
 async def get_predictive_analysis(
     asset_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = AssetService(db)
-    
+    service = AssetService()
+
     # 1. Get Asset
     asset = await service.get_asset(asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
-        
+
     # 2. Get Timeline
     events = await service.get_timeline(asset_id)
-    
+
     # 3. Call AI Agent
     try:
         from ai.agents.maintenance_agent import MaintenanceAgent
@@ -134,12 +125,12 @@ async def get_predictive_analysis(
         return {
             "failure_risk_score": 50,
             "trend": "stable",
-            "recommendations": ["Agent unavailable - check module imports"]
+            "recommendations": ["Agent unavailable - check module imports"],
         }
     except Exception as e:
         logger.error(f"Predictive analysis failed: {e}")
         return {
             "failure_risk_score": 50,
             "trend": "stable",
-            "recommendations": ["Analysis failed due to a system error. Please try again."]
+            "recommendations": ["Analysis failed due to a system error. Please try again."],
         }

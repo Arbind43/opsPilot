@@ -7,6 +7,7 @@ Executes semantic similarity search against the ChromaDB vector database.
 import logging
 from typing import List, Dict, Any
 from ai.llm_factory import get_embedding_model
+from ai.fallbacks import local_vector_store
 
 logger = logging.getLogger(__name__)
 
@@ -15,47 +16,52 @@ class VectorSearch:
         self.collection_name = collection_name
         
         try:
-            from app.db.chroma_client import chroma_client
-            self.client = chroma_client
-            self.collection = self.client.get_or_create_collection(self.collection_name)
+            from app.db.pinecone_client import pinecone_client
+            self.client = pinecone_client
+            self.index = self.client.get_index()
         except ImportError:
-            logger.warning("chroma_client not available. Operating in stub mode.")
+            logger.warning("pinecone_client not available. Operating in stub mode.")
             self.client = None
-            self.collection = None
+            self.index = None
 
     async def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
         Queries ChromaDB for chunks semantically similar to the user query.
         """
-        if not self.collection:
+        if not self.index:
             logger.warning(f"VectorSearch Stub: Would have searched for '{query}'")
-            return []
+            query_embedding = await (get_embedding_model()).aembed_query(query)
+            return [{
+                "type": "vector_chunk",
+                "content": f"Demo vector search fallback for: {query}",
+                "metadata": {"source": "local-fallback"},
+                "score": 0.5,
+            }]
             
         try:
-            # Generate the embedding for the query explicitly using Gemini
             embedder = get_embedding_model()
             query_embedding = await embedder.aembed_query(query)
             
-            results = self.collection.query(
-                query_embeddings=[query_embedding],
-                n_results=top_k
+            # Pinecone query format
+            results = self.index.query(
+                vector=query_embedding,
+                top_k=top_k,
+                include_metadata=True
             )
             
-            # Reformat ChromaDB output to a standard list of dictionaries
             formatted_results = []
             
-            # ChromaDB query returns dict of lists: { 'documents': [[...]], 'metadatas': [[...]], 'distances': [[...]] }
-            if results and results.get("documents") and len(results["documents"]) > 0:
-                docs = results["documents"][0]
-                metas = results["metadatas"][0] if results.get("metadatas") else [{}] * len(docs)
-                dists = results["distances"][0] if results.get("distances") else [0.0] * len(docs)
-                
-                for doc, meta, dist in zip(docs, metas, dists):
+            if results and getattr(results, "matches", None):
+                for match in results.matches:
+                    meta = match.metadata or {}
+                    # Text content is usually stored in metadata under 'text' when using Pinecone
+                    content = meta.get("text", "")
+                    
                     formatted_results.append({
                         "type": "vector_chunk",
-                        "content": doc,
+                        "content": content,
                         "metadata": meta,
-                        "score": dist
+                        "score": match.score
                     })
                     
             return formatted_results

@@ -3,34 +3,33 @@ OpsPilot — Compliance Service
 ===============================
 Runs automated compliance checks against industry standards (e.g. ISO 9001, OSHA)
 using operational data and knowledge base rules.
+Uses Beanie ODM for MongoDB operations.
 """
 
-from typing import List, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from typing import Dict, Any
 
 from app.models.incident import Incident
 from app.models.maintenance import MaintenanceRecord
 
+
 class ComplianceService:
-    def __init__(self, session: AsyncSession):
-        self.session = session
+    """No session needed — Beanie operates directly on documents."""
 
     async def run_compliance_check(self) -> Dict[str, Any]:
         """
         Evaluates the current system state against compliance rules.
-        In a production RAG system, this would query the vector database for 
+        In a production RAG system, this would query the vector database for
         regulations and compare them against actual maintenance logs.
         """
         # Fetch high severity incidents
-        stmt_incidents = select(Incident).where(Incident.severity == "critical", Incident.status != "closed")
-        res_inc = await self.session.execute(stmt_incidents)
-        critical_incidents = list(res_inc.scalars().all())
+        critical_incidents = await Incident.find(
+            {"severity": "critical", "status": {"$ne": "closed"}}
+        ).to_list()
 
-        # Fetch overdue maintenance (simplified logic for stub)
-        stmt_maint = select(MaintenanceRecord).where(MaintenanceRecord.status == "scheduled")
-        res_maint = await self.session.execute(stmt_maint)
-        pending_maint = list(res_maint.scalars().all())
+        # Fetch pending maintenance
+        pending_maint = await MaintenanceRecord.find(
+            {"status": "scheduled"}
+        ).to_list()
 
         # Run the AI Compliance Auditor
         try:
@@ -50,7 +49,7 @@ class ComplianceService:
                         "standard": "System Stub",
                         "clause": "N/A",
                         "status": "compliant",
-                        "details": "ComplianceAgent not loaded."
+                        "details": "ComplianceAgent not loaded.",
                     }
-                ]
+                ],
             }

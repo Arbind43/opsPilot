@@ -4,7 +4,7 @@ OpsPilot — SQLAlchemy Models Package
 All ORM model classes are imported here for Alembic auto-detection.
 """
 
-from app.models.base import Base
+from app.models.base import BaseDocument
 from app.models.user import User
 from app.models.asset import Asset
 from app.models.document import Document, DocumentChunk
@@ -16,7 +16,7 @@ from app.models.conversation import Conversation, Message
 from app.models.audit_log import AuditLog
 
 __all__ = [
-    "Base",
+    "BaseDocument",
     "User",
     "Asset",
     "Document",

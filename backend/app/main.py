@@ -5,11 +5,17 @@ Creates and configures the FastAPI application with all middleware,
 routers, and startup/shutdown lifecycle events.
 """
 
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.config import get_settings
 from app.core.events import on_startup, on_shutdown

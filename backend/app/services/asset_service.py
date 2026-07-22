@@ -2,21 +2,20 @@
 OpsPilot — Asset Service
 ===========================
 Asset CRUD, hierarchy management, and timeline aggregation.
+Uses Beanie ODM for MongoDB operations (no SQLAlchemy session needed).
 """
 
 from typing import Any, Dict, List
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.models.asset import Asset
 from app.repositories.asset_repo import AssetRepository
 from app.schemas.asset import AssetCreate, AssetUpdate
 
+
 class AssetService:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.repo = AssetRepository(session)
+    def __init__(self):
+        self.repo = AssetRepository()
 
     async def get_all_assets(self, offset: int = 0, limit: int = 20) -> List[Asset]:
         return await self.repo.get_all(offset=offset, limit=limit)
@@ -33,7 +32,7 @@ class AssetService:
             status=data.status,
             description=data.description,
             metadata_json=data.metadata_json,
-            parent_id=data.parent_id
+            parent_id=data.parent_id,
         )
         return await self.repo.create(asset)
 
@@ -54,22 +53,22 @@ class AssetService:
         """
         Fetch the entire asset hierarchy as a nested dictionary tree.
         WARNING: This is a simplistic implementation that pulls all assets.
-        In a real prod environment with 10k+ assets, this needs optimized CTEs.
+        In a real prod environment with 10k+ assets, this needs optimized aggregation.
         """
         all_assets = await self.repo.get_all(limit=10000)
-        
+
         # Build adjacency list
         asset_map = {}
         for a in all_assets:
-            asset_map[a.id] = {
+            asset_map[str(a.id)] = {
                 "id": str(a.id),
                 "name": a.name,
                 "asset_type": a.asset_type,
                 "status": a.status,
-                "parent_id": a.parent_id,
-                "children": []
+                "parent_id": str(a.parent_id) if a.parent_id else None,
+                "children": [],
             }
-            
+
         # Construct tree
         roots = []
         for a_id, a_dict in asset_map.items():
@@ -80,13 +79,39 @@ class AssetService:
                 if parent_id in asset_map:
                     asset_map[parent_id]["children"].append(a_dict)
                 else:
-                    # Parent not found (e.g. pagination cut off), treat as root
                     roots.append(a_dict)
-                    
+
         return roots
 
     async def get_timeline(self, asset_id: UUID) -> List[Dict[str, Any]]:
         """Fetch unified timeline (incidents, maintenance, etc.) for a specific asset."""
-        # TODO: Pull from Incident, Maintenance, Inspection tables using UNION or individual queries.
-        # For now, return empty placeholder.
-        return []
+        from app.models.incident import Incident
+        from app.models.maintenance import MaintenanceRecord
+
+        timeline = []
+
+        incidents = await Incident.find({"asset_id": asset_id}).sort("-created_at").limit(20).to_list()
+        for inc in incidents:
+            timeline.append({
+                "id": str(inc.id),
+                "type": "incident",
+                "title": inc.title,
+                "status": inc.status,
+                "severity": inc.severity,
+                "timestamp": inc.created_at.isoformat() if inc.created_at else None,
+            })
+
+        records = await MaintenanceRecord.find({"asset_id": asset_id}).sort("-created_at").limit(20).to_list()
+        for rec in records:
+            timeline.append({
+                "id": str(rec.id),
+                "type": "maintenance",
+                "title": rec.title,
+                "status": rec.status,
+                "maintenance_type": rec.maintenance_type,
+                "timestamp": (rec.scheduled_at or rec.created_at).isoformat() if (rec.scheduled_at or rec.created_at) else None,
+            })
+
+        # Sort combined list
+        timeline.sort(key=lambda x: x["timestamp"] or "", reverse=True)
+        return timeline

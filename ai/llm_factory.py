@@ -9,6 +9,8 @@ import logging
 from functools import lru_cache
 from typing import Any
 
+from ai.fallbacks import FallbackEmbeddings, FallbackLLM
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,11 +24,23 @@ def get_llm(provider: str = None, temperature: float = 0.0, model_name: str = No
         provider = ai_settings.LLM_PROVIDER.lower()
 
     if provider == "gemini":
-        return _get_gemini_llm(temperature, model_name)
+        try:
+            return _get_gemini_llm(temperature, model_name)
+        except Exception as exc:
+            logger.warning("Falling back to local LLM: %s", exc)
+            return FallbackLLM(provider="gemini", temperature=temperature)
     elif provider == "openai":
-        return _get_openai_llm(temperature)
+        try:
+            return _get_openai_llm(temperature)
+        except Exception as exc:
+            logger.warning("Falling back to local LLM: %s", exc)
+            return FallbackLLM(provider="openai", temperature=temperature)
     elif provider == "groq":
-        return _get_groq_llm(temperature, model_name)
+        try:
+            return _get_groq_llm(temperature, model_name)
+        except Exception as exc:
+            logger.warning("Falling back to local LLM: %s", exc)
+            return FallbackLLM(provider="groq", temperature=temperature)
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")
 
@@ -87,36 +101,40 @@ def get_embedding_model(provider: str = None):
         provider = ai_settings.EMBEDDING_PROVIDER.lower()
 
     if provider == "gemini":
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
-        from ai.config import ai_settings
-        return GoogleGenerativeAIEmbeddings(
-            model=ai_settings.GEMINI_EMBEDDING_MODEL,
-            google_api_key=ai_settings.GOOGLE_API_KEY,
-        )
+        try:
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            from ai.config import ai_settings
+            if not ai_settings.GOOGLE_API_KEY:
+                raise ValueError("GOOGLE_API_KEY is not set in .env")
+            return GoogleGenerativeAIEmbeddings(
+                model=ai_settings.GEMINI_EMBEDDING_MODEL,
+                google_api_key=ai_settings.GOOGLE_API_KEY,
+            )
+        except Exception as exc:
+            logger.warning("Falling back to local embeddings: %s", exc)
+            return FallbackEmbeddings()
     elif provider == "openai":
-        from langchain_openai import OpenAIEmbeddings
-        from ai.config import ai_settings
-        return OpenAIEmbeddings(
-            model=ai_settings.OPENAI_EMBEDDING_MODEL,
-            api_key=ai_settings.OPENAI_API_KEY,
-        )
+        try:
+            from langchain_openai import OpenAIEmbeddings
+            from ai.config import ai_settings
+            if not ai_settings.OPENAI_API_KEY:
+                raise ValueError("OPENAI_API_KEY is not set in .env")
+            return OpenAIEmbeddings(
+                model=ai_settings.OPENAI_EMBEDDING_MODEL,
+                api_key=ai_settings.OPENAI_API_KEY,
+            )
+        except Exception as exc:
+            logger.warning("Falling back to local embeddings: %s", exc)
+            return FallbackEmbeddings()
     elif provider == "huggingface":
-        # Use ChromaDB's built-in ONNX MiniLM embedder — zero extra dependencies needed
-        # It's already installed as part of chromadb package
-        from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
-        onnx_ef = ONNXMiniLM_L6_V2()
-
-        class ChromaEmbeddingWrapper:
-            """Wraps ChromaDB's ONNX embedder to be LangChain-compatible."""
-            def embed_documents(self, texts):
-                return onnx_ef(texts)
-            def embed_query(self, text):
-                return onnx_ef([text])[0]
-            async def aembed_query(self, text):
-                return self.embed_query(text)
-            async def aembed_documents(self, texts):
-                return self.embed_documents(texts)
-
-        return ChromaEmbeddingWrapper()
+        try:
+            from langchain_huggingface import HuggingFaceEmbeddings
+            from ai.config import ai_settings
+            return HuggingFaceEmbeddings(
+                model_name=ai_settings.HUGGINGFACE_EMBEDDING_MODEL
+            )
+        except Exception as exc:
+            logger.warning("Falling back to local embeddings: %s", exc)
+            return FallbackEmbeddings()
     else:
         raise ValueError(f"Unknown embedding provider: {provider}")

@@ -38,36 +38,18 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # ── PostgreSQL ───────────────────────────────────
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str = "opspilot"
-    POSTGRES_PASSWORD: str = "opspilot_secret"
-    POSTGRES_DB: str = "opspilot"
-
-    @property
-    def DATABASE_URL(self) -> str:
-        return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
-
-    @property
-    def DATABASE_URL_SYNC(self) -> str:
-        """Synchronous URL for Alembic migrations."""
-        return (
-            f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+    # ── MongoDB ──────────────────────────────────────
+    MONGO_URI: str = "mongodb://localhost:27017"
+    MONGO_DB: str = "opspilot"
 
     # ── Neo4j ────────────────────────────────────────
     NEO4J_URI: str = "bolt://localhost:7687"
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str = "neo4j_secret"
 
-    # ── ChromaDB ─────────────────────────────────────
-    CHROMA_HOST: str = "localhost"
-    CHROMA_PORT: int = 8100
+    # ── Pinecone ─────────────────────────────────────
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX_NAME: str = "opspilot"
 
     # ── Redis ────────────────────────────────────────
     REDIS_URL: str = "redis://localhost:6379/0"

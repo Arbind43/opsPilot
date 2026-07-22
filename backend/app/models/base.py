@@ -1,47 +1,25 @@
 """
 OpsPilot — Base Model
 ======================
-Declarative base with shared audit columns (id, created_at, updated_at).
+Base document with shared audit columns for Beanie.
 """
 
-import uuid
 from datetime import datetime, timezone
+import uuid
+from pydantic import Field
+from beanie import Document, Insert, Replace, before_event
 
-from sqlalchemy import DateTime, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+class BaseDocument(Document):
+    """Base document class with UUID primary key and timestamps."""
+    id: uuid.UUID = Field(default_factory=uuid.uuid4)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    @before_event(Insert)
+    def set_created_at(self):
+        self.created_at = datetime.now(timezone.utc)
+        self.updated_at = self.created_at
 
-class Base(DeclarativeBase):
-    """Declarative base class for all ORM models."""
-
-    pass
-
-
-class TimestampMixin:
-    """Mixin that adds created_at and updated_at audit columns."""
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        server_default=func.now(),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        server_default=func.now(),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
-
-
-class UUIDMixin:
-    """Mixin that adds a UUID primary key."""
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4,
-        nullable=False,
-    )
+    @before_event(Replace)
+    def set_updated_at(self):
+        self.updated_at = datetime.now(timezone.utc)

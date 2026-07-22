@@ -5,7 +5,7 @@ import api from '@/lib/api';
 import { ShieldCheck, Loader2, AlertCircle, CheckCircle2, ShieldAlert, TrendingUp } from 'lucide-react';
 
 const STATUS_CONFIG: Record<string, {
-  icon: JSX.Element;
+  icon: React.ReactElement;
   badgeCls: string;
   bgCls: string;
   label: string;

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import api from '@/lib/api';
 import {
   CheckCircle2, AlertTriangle, Box, FileText, TrendingUp,
-  Users, ShieldCheck, Activity, Settings, ArrowUpRight,
+  Users, ShieldCheck, Activity, ArrowUpRight,
   Zap, Database, BarChart3, UserCheck, UserX, Clock,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';

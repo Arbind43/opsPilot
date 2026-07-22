@@ -8,7 +8,6 @@ Business logic only — no HTTP concerns.
 import random
 import string
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.core.exceptions import AlreadyExistsError, AuthenticationError, BadRequestError
@@ -29,9 +28,8 @@ logger = structlog.get_logger()
 class AuthService:
     """Orchestrates authentication business logic."""
 
-    def __init__(self, session: AsyncSession, settings: Settings):
-        self.session = session
-        self.repo = UserRepository(session)
+    def __init__(self, settings: Settings):
+        self.repo = UserRepository()
         self.settings = settings
 
     async def register(self, data: RegisterRequest) -> User:
@@ -104,6 +102,6 @@ class AuthService:
             raise AuthenticationError("User not found")
 
         user.hashed_password = hash_password(new_password)
-        await self.session.commit()
+        await user.save()
         r.delete(f"pwd_reset:{email}")
         logger.info("password_reset_complete", email=email)

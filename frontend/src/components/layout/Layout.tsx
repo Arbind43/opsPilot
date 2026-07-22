@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -26,7 +26,6 @@ import {
   ShieldCheck,
   Cpu,
   Eye,
-  Bot
 } from 'lucide-react';
 import CopilotWidget from '@/components/ui/CopilotWidget';
 
@@ -69,6 +68,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [scrolled, setScrolled]         = useState(false);
   const [showCopilot, setShowCopilot]   = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [copilotWidth, setCopilotWidth] = useState(400);
+
+  const handleDrag = useCallback((e: MouseEvent) => {
+    const newWidth = window.innerWidth - e.clientX;
+    if (newWidth > 300 && newWidth < window.innerWidth * 0.8) {
+      setCopilotWidth(newWidth);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    document.removeEventListener('mousemove', handleDrag);
+    document.removeEventListener('mouseup', handleDragEnd);
+    document.body.style.cursor = 'default';
+  }, [handleDrag]);
+
+  const startDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.addEventListener('mousemove', handleDrag);
+    document.addEventListener('mouseup', handleDragEnd);
+    document.body.style.cursor = 'ew-resize';
+  };
 
   const currentPage = PAGE_TITLES[location.pathname] || { title: 'OpsPilot AI', subtitle: '' };
 
@@ -357,10 +377,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* ── Copilot Sliding Drawer ── */}
       <div 
-        className={`fixed top-0 right-0 h-full w-[400px] max-w-full z-50 transition-transform duration-300 ease-in-out transform
+        className={`fixed top-0 right-0 h-full max-w-full z-50 transition-transform duration-300 ease-in-out transform flex
                    ${showCopilot ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: copilotWidth }}
       >
-        <CopilotWidget onClose={() => setShowCopilot(false)} />
+        <div 
+          onMouseDown={startDrag}
+          className="w-1.5 h-full cursor-ew-resize bg-transparent hover:bg-blue-500/50 transition-colors absolute left-0 top-0 z-10"
+        />
+        <div className="flex-1 h-full relative">
+          <CopilotWidget onClose={() => setShowCopilot(false)} />
+        </div>
       </div>
 
     </div>

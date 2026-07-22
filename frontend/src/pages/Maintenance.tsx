@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import api from '@/lib/api';
-import { Wrench, Plus, Loader2, Calendar, Settings, Zap } from 'lucide-react';
+import { Wrench, Plus, Calendar, Settings, Zap } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import toast from 'react-hot-toast';
 import { ScheduleMaintenanceModal } from '@/components/ui/ScheduleMaintenanceModal';
 
-const TYPE_CONFIG: Record<string, { label: string; icon: JSX.Element; cls: string }> = {
+const TYPE_CONFIG: Record<string, { label: string; icon: React.ReactElement; cls: string }> = {
   predictive: {
     label: 'Predictive',
     icon: <Zap size={11} />,

@@ -8,7 +8,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 
-const REPORT_ICONS: Record<string, JSX.Element> = {
+const REPORT_ICONS: Record<string, React.ReactElement> = {
   summary: <FileBarChart size={15} className="text-violet-400" />,
   rca: <Activity size={15} className="text-orange-400" />,
   default: <FileText size={15} className="text-slate-400" />,

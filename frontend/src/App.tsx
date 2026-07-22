@@ -17,13 +17,6 @@ import Reports    from '@/pages/Reports';
 import Settings   from '@/pages/Settings';
 import KnowledgeGraph from '@/pages/KnowledgeGraph';
 
-// ─── Protected Route — requires authentication ────────────────────────────
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return <Layout>{children}</Layout>;
-};
-
 // ─── Role Guard — requires auth + specific role permission ────────────────
 function RoleGuard({ path, children }: { path: string; children: React.ReactNode }) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);

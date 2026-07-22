@@ -207,7 +207,7 @@ export default function OperatorDashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {alerts.slice(0, 3).map((alert, i) => (
+                  {alerts.slice(0, 3).map((alert) => (
                     <div key={alert.id} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-red-500/8 border border-red-500/15">
                       <AlertTriangle size={12} className="text-red-400 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -242,7 +242,7 @@ export default function OperatorDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {activities.slice(0, 4).map((a, idx) => (
+                  {activities.slice(0, 4).map((a) => (
                     <div key={a.id} className="flex gap-2">
                       <div className="w-4 h-4 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
                         <Activity size={8} className="text-amber-400" />

@@ -8,7 +8,7 @@ import os
 import uuid
 import mimetypes
 
-ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.xlsx', '.csv', '.txt', '.png', '.jpg', '.jpeg'}
+ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.png', '.jpg', '.jpeg'}
 
 def validate_file_extension(filename: str) -> bool:
     """Check if the file extension is allowed."""
@@ -26,9 +26,9 @@ def get_file_type(filename: str) -> str:
     ext = os.path.splitext(filename)[1].lower()
     if ext in {'.pdf'}:
         return "manual"
-    elif ext in {'.docx', '.txt'}:
+    elif ext in {'.doc', '.docx', '.txt'}:
         return "report"
-    elif ext in {'.xlsx', '.csv'}:
+    elif ext in {'.xls', '.xlsx', '.csv'}:
         return "data"
     elif ext in {'.png', '.jpg', '.jpeg'}:
         return "schematic"

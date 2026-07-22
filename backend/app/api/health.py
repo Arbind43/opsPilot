@@ -39,13 +39,13 @@ async def readiness():
     except Exception as e:
         checks["neo4j"] = f"error: {str(e)}"
 
-    # ChromaDB check
+    # Pinecone check
     try:
-        from app.db.chroma_client import chroma_client
-        chroma_client.heartbeat()
-        checks["chromadb"] = "ok"
+        from app.db.pinecone_client import pinecone_client
+        pinecone_client.heartbeat()
+        checks["pinecone"] = "ok"
     except Exception as e:
-        checks["chromadb"] = f"error: {str(e)}"
+        checks["pinecone"] = f"error: {str(e)}"
 
     all_ok = all(v == "ok" for v in checks.values())
     return {"status": "ready" if all_ok else "degraded", "checks": checks}

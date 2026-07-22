@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import {
   Send, Bot, User, Loader2, Sparkles, Database, Network, BookOpen,
-  ChevronDown, ChevronUp, Zap, Copy, Check, X
+  ChevronDown, ChevronUp, Copy, Check, X
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { useAuthStore } from '@/store/authStore';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -121,7 +122,7 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
+      const token = useAuthStore.getState().accessToken;
       const response = await fetch('http://localhost:8000/api/v1/copilot/chat/stream', {
         method: 'POST',
         headers: {
@@ -161,9 +162,12 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
                    const newMsgs = [...prev];
                    const last = newMsgs[newMsgs.length - 1];
                    if (last.role === 'assistant') {
-                     last.context = data.context_used;
-                     last.sources_count = data.sources_count;
-                     last.confidence = 0.9; // Or dynamic based on future enhancement
+                     newMsgs[newMsgs.length - 1] = {
+                       ...last,
+                       context: data.context_used,
+                       sources_count: data.sources_count,
+                       confidence: 0.9 // Or dynamic based on future enhancement
+                     };
                    }
                    return newMsgs;
                  });
@@ -172,7 +176,10 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
                    const newMsgs = [...prev];
                    const last = newMsgs[newMsgs.length - 1];
                    if (last.role === 'assistant') {
-                     last.content += data.content;
+                     newMsgs[newMsgs.length - 1] = {
+                       ...last,
+                       content: last.content + data.content
+                     };
                    }
                    return newMsgs;
                  });

@@ -2,6 +2,7 @@
 OpsPilot — Document Service
 ==============================
 Handles document metadata operations and file uploads.
+Uses Beanie ODM for MongoDB operations (no SQLAlchemy session needed).
 """
 
 import os
@@ -10,19 +11,17 @@ from typing import List
 from uuid import UUID, uuid4
 from fastapi import UploadFile
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.document import Document
 from app.repositories.document_repo import DocumentRepository
 from app.utils.file_utils import generate_storage_path, get_file_type, validate_file_extension
 from app.core.exceptions import BadRequestError
 
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "/app/data/uploads")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./storage/uploads")
+
 
 class DocumentService:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.repo = DocumentRepository(session)
-
+    def __init__(self):
+        self.repo = DocumentRepository()
         # Ensure upload dir exists
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -36,14 +35,14 @@ class DocumentService:
         doc = await self.repo.get_by_id(doc_id)
         if not doc:
             return False
-        
+
         # Remove file from disk
         if doc.file_path and os.path.exists(doc.file_path):
             try:
                 os.remove(doc.file_path)
             except Exception:
                 pass
-                
+
         await self.repo.delete(doc)
         return True
 
@@ -51,38 +50,58 @@ class DocumentService:
         """
         Save uploaded file to disk, create database record, and trigger processing.
         """
-        if not file.filename or not validate_file_extension(file.filename):
-            raise BadRequestError(message="Invalid file type. Allowed: PDF, DOCX, XLSX, Images.")
+        filename = file.filename or "unnamed_file"
+        if not validate_file_extension(filename):
+            raise BadRequestError(
+                message=f"Invalid file type '{os.path.splitext(filename)[1]}'. "
+                        f"Allowed: PDF, DOC, DOCX, XLS, XLSX, CSV, TXT, PNG, JPG."
+            )
 
-        # Save file to disk asynchronously
-        file_path = generate_storage_path(UPLOAD_DIR, file.filename)
+        # Validate max file size
+        max_size_bytes = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50")) * 1024 * 1024
+
+        # Save file to disk asynchronously (enforce size limit while streaming)
+        file_path = generate_storage_path(UPLOAD_DIR, filename)
         size = 0
-        
-        async with aiofiles.open(file_path, 'wb') as out_file:
-            while content := await file.read(1024 * 1024):  # read in 1MB chunks
-                await out_file.write(content)
+
+        async with aiofiles.open(file_path, "wb") as out_file:
+            while content := await file.read(1024 * 1024):  # read in 1 MB chunks
                 size += len(content)
+                if size > max_size_bytes:
+                    # Remove partial file and reject
+                    try:
+                        os.remove(file_path)
+                    except OSError:
+                        pass
+                    raise BadRequestError(
+                        message=f"File exceeds the maximum allowed size of "
+                                f"{int(os.getenv('MAX_UPLOAD_SIZE_MB', '50'))} MB."
+                    )
+                await out_file.write(content)
 
         # Map file type
-        doc_category = get_file_type(file.filename)
+        doc_category = get_file_type(filename)
 
         # Create database record
         doc = Document(
             id=uuid4(),
-            title=file.filename,
+            title=filename,
             file_path=file_path,
             file_type=file.content_type or "application/octet-stream",
             doc_category=doc_category,
             file_size=size,
             processing_status="pending",
             uploaded_by=user_id,
-            asset_id=asset_id
+            asset_id=asset_id,
         )
-        
+
         saved_doc = await self.repo.create(doc)
 
         # Trigger Celery background task for AI Pipeline
-        from worker.tasks.document_tasks import process_document_task
-        process_document_task.delay(str(saved_doc.id), saved_doc.file_path)
+        try:
+            from worker.tasks.document_tasks import process_document_task
+            process_document_task.delay(str(saved_doc.id), saved_doc.file_path)
+        except Exception:
+            pass  # Worker may not be running locally; doc is still saved
 
         return saved_doc

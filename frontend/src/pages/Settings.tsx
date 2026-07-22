@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import api from '@/lib/api';
 import {
-  Settings as SettingsIcon, Shield, Database, Users, Loader2, Activity, Building2, CheckCircle2,
+  Settings as SettingsIcon, Shield, Database, Users, Activity, Building2, CheckCircle2,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 

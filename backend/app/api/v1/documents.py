@@ -7,12 +7,11 @@ Handling document uploads and list operations.
 from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_current_user_id, get_db
 from app.schemas.document import DocumentResponse
 from app.services.document_service import DocumentService
 from app.core.exceptions import BadRequestError
+from app.dependencies import get_current_user_id
 
 import logging
 from ai.llm_factory import get_llm
@@ -21,47 +20,50 @@ from langchain_core.prompts import ChatPromptTemplate
 
 logger = logging.getLogger(__name__)
 
+
 class KnowledgeGap(BaseModel):
     document_type: str = Field(description="e.g. LOTO Procedure, P&ID Diagram, Incident Report")
     reason: str = Field(description="Why this document is important to have")
     priority: str = Field(description="high, medium, low")
 
+
 class KnowledgeGapsResponse(BaseModel):
     gaps: List[KnowledgeGap] = Field(description="List of identified missing documents")
 
+
 router = APIRouter()
+
 
 @router.get("", response_model=dict, summary="List all documents")
 async def list_documents(
     page: int = 1,
     page_size: int = 20,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = DocumentService(db)
+    service = DocumentService()
     offset = (page - 1) * page_size
     items = await service.get_all_documents(offset=offset, limit=page_size)
     return {
-        "items": [DocumentResponse.model_validate(doc).model_dump(mode='json') for doc in items],
+        "items": [DocumentResponse.model_validate(doc).model_dump(mode="json") for doc in items],
         "page": page,
-        "page_size": page_size
+        "page_size": page_size,
     }
 
 
 @router.get("/gaps", summary="Detect Knowledge Gaps using AI")
 async def get_knowledge_gaps(
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = DocumentService(db)
+    service = DocumentService()
     # Fetch all documents to see what we have
     items = await service.get_all_documents(offset=0, limit=100)
-    
-    doc_titles = [doc.file_name for doc in items] if items else []
-    
+
+    # Use doc.title (the correct field name)
+    doc_titles = [doc.title for doc in items] if items else []
+
     llm = get_llm(temperature=0.2)
     structured_llm = llm.with_structured_output(KnowledgeGapsResponse)
-    
+
     prompt = ChatPromptTemplate.from_template(
         "You are the OpsPilot AI Knowledge Manager. Your job is to analyze the repository of currently uploaded "
         "industrial documents and identify critical missing knowledge.\n\n"
@@ -69,9 +71,9 @@ async def get_knowledge_gaps(
         "Identify 3 standard industrial documents (e.g., LOTO procedures, Maintenance schedules, P&IDs, ISO manuals) "
         "that are missing from this list but should exist in a complete plant repository.\n"
     )
-    
+
     chain = prompt | structured_llm
-    
+
     try:
         docs_text = "\n".join(doc_titles) if doc_titles else "No documents uploaded yet."
         result = await chain.ainvoke({"docs": docs_text})
@@ -83,7 +85,7 @@ async def get_knowledge_gaps(
                 {
                     "document_type": "Emergency Response Plan",
                     "reason": "Crucial for safety compliance and incident handling (AI fallback).",
-                    "priority": "high"
+                    "priority": "high",
                 }
             ]
         }
@@ -94,9 +96,8 @@ async def upload_document(
     file: UploadFile = File(...),
     asset_id: Optional[UUID] = Form(None),
     user_id: UUID = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = DocumentService(db)
+    service = DocumentService()
     try:
         doc = await service.upload_document(file=file, user_id=user_id, asset_id=asset_id)
         return doc
@@ -108,9 +109,8 @@ async def upload_document(
 async def get_document(
     doc_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = DocumentService(db)
+    service = DocumentService()
     doc = await service.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -121,9 +121,8 @@ async def get_document(
 async def delete_document(
     doc_id: UUID,
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
 ):
-    service = DocumentService(db)
+    service = DocumentService()
     success = await service.delete_document(doc_id)
     if not success:
         raise HTTPException(status_code=404, detail="Document not found")

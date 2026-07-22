@@ -1,46 +1,58 @@
 """
-OpsPilot — SQLAlchemy Async Session
+OpsPilot — MongoDB Async Session
 =====================================
-Creates the async engine and provides a session dependency for FastAPI.
+Initializes the MongoDB connection using Motor and Beanie.
 """
 
-from typing import AsyncGenerator
+from motor.motor_asyncio import AsyncIOMotorClient
+# Patch for compatibility between Beanie and newer Motor versions
+AsyncIOMotorClient.append_metadata = lambda self, *args, **kwargs: None
 
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
-
+from beanie import init_beanie
 from app.config import get_settings
 
 settings = get_settings()
 
-# Async engine with connection pooling
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_size=20,
-    max_overflow=10,
-    pool_pre_ping=True,
-)
+db_client = None
 
-# Session factory
-async_session_factory = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+async def init_db():
+    """Initializes the database connection and Beanie ODM."""
+    global db_client
+    db_client = AsyncIOMotorClient(settings.MONGO_URI)
+    db = db_client[settings.MONGO_DB]
+    
+    # Import models
+    from app.models.user import User
+    from app.models.asset import Asset
+    from app.models.document import Document
+    from app.models.incident import Incident
+    from app.models.inspection import Inspection
+    from app.models.maintenance import MaintenanceRecord
+    from app.models.report import Report
+    from app.models.conversation import Conversation
+    from app.models.audit_log import AuditLog
 
+    await init_beanie(
+        database=db,
+        document_models=[
+            User,
+            Asset,
+            Document,
+            Incident,
+            Inspection,
+            MaintenanceRecord,
+            Report,
+            Conversation,
+            AuditLog
+        ]
+    )
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency that yields an async database session."""
-    async with async_session_factory() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+async def close_db():
+    """Closes the database connection."""
+    global db_client
+    if db_client:
+        db_client.close()
+
+async def get_db_session():
+    """Dummy dependency for compatibility during refactor."""
+    yield None

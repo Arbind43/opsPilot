@@ -4,47 +4,33 @@ OpsPilot — Conversation & Message Models
 Stores AI Copilot conversation history for memory and auditability.
 """
 
+from typing import Optional, Dict, Any
 import uuid
-
-from sqlalchemy import Float, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from pydantic import Field
+from app.models.base import BaseDocument
 
 
-class Conversation(Base, UUIDMixin, TimestampMixin):
-    __tablename__ = "conversations"
+class Conversation(BaseDocument):
+    title: str = "New Conversation"
+    user_id: uuid.UUID = Field(index=True)
 
-    title: Mapped[str] = mapped_column(String(500), nullable=False, default="New Conversation")
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
-    )
-
-    # Relationships
-    user = relationship("User", back_populates="conversations")
-    messages = relationship(
-        "Message", back_populates="conversation", cascade="all, delete-orphan", order_by="Message.created_at"
-    )
+    class Settings:
+        name = "conversations"
 
     def __repr__(self) -> str:
         return f"<Conversation {self.title}>"
 
 
-class Message(Base, UUIDMixin, TimestampMixin):
-    __tablename__ = "messages"
+class Message(BaseDocument):
+    conversation_id: uuid.UUID = Field(index=True)
+    role: str  # user | assistant
+    content: str
+    citations: Optional[Dict[str, Any]] = None
+    confidence_score: Optional[float] = None
+    metadata_json: Optional[Dict[str, Any]] = None
 
-    conversation_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False
-    )
-    role: Mapped[str] = mapped_column(String(20), nullable=False)  # user | assistant
-    content: Mapped[str] = mapped_column(Text, nullable=False)
-    citations: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-
-    # Relationships
-    conversation = relationship("Conversation", back_populates="messages")
+    class Settings:
+        name = "messages"
 
     def __repr__(self) -> str:
         return f"<Message {self.role} in {self.conversation_id}>"

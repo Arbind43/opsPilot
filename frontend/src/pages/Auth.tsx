@@ -267,23 +267,25 @@ export default function Auth() {
           full_name: 'Google User',
           role: 'admin',
         });
-      } catch (e) {
-        // Likely already exists, which is fine
+      } catch (e: any) {
+        // If it fails with 409, it already exists, which is fine.
+        // Otherwise, it might be a real error (like network down), so throw it.
+        if (e.response?.status !== 409 && e.response?.status !== 400) {
+          throw e;
+        }
       }
       
       const res = await api.post('/auth/login', { email: 'google.demo@opspilot.ai', password: 'google_mock_password' });
       setTokens(res.data.access_token, res.data.refresh_token);
+      
       const userRes = await api.get('/auth/me');
       setUser(userRes.data);
-      
-      const role = userRes.data.role;
-      const roleMeta = isValidRole(role) ? ROLE_META[role] : null;
-      const roleLabel = roleMeta ? roleMeta.label : role;
       
       toast.success(`Signed in with Google! Welcome ${userRes.data.full_name}.`);
       navigate('/');
     } catch (err: any) {
-      toast.error('Google Sign In failed.');
+      const msg = err.response?.data?.detail || err.message || 'Google Sign In failed.';
+      toast.error(`Google Sign In failed: ${msg}`);
     } finally { setLoading(false); }
   };
 

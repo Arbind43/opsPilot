@@ -1,9 +1,9 @@
-# OpsPilot Backend — Local Run Script
+# OpsPilot Backend — Local Celery Worker Script
 # Run from: opspilot/backend/
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Starting OpsPilot Backend..." -ForegroundColor Cyan
+Write-Host "Starting OpsPilot Celery Worker..." -ForegroundColor Cyan
 
 # Activate virtual environment
 $venvActivate = Join-Path $PSScriptRoot "venv\Scripts\Activate.ps1"
@@ -20,8 +20,9 @@ if (!$envFile) {
     $envFile = Join-Path $PSScriptRoot "..\.env"
 }
 
-# Start the backend
-Write-Host "Launching FastAPI on http://localhost:8000" -ForegroundColor Green
-Write-Host "API docs: http://localhost:8000/docs" -ForegroundColor Yellow
+# Add backend and parent directory to PYTHONPATH
 $env:PYTHONPATH = "$PSScriptRoot;$(Split-Path $PSScriptRoot -Parent)"
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --env-file ..\\.env
+
+Write-Host "Launching Celery Worker" -ForegroundColor Green
+# Using pool=solo for Windows compatibility
+celery -A worker.celery_app worker -l info --pool=solo

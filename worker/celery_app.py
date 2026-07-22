@@ -6,7 +6,16 @@ Used for document processing pipeline and report generation.
 """
 
 import os
+from pathlib import Path
 from celery import Celery
+from dotenv import load_dotenv
+
+# Load .env file from the parent directory of backend (opspilot/.env)
+env_path = Path(__file__).resolve().parents[2] / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    load_dotenv()
 
 # Read Redis URL from environment, default for local dev without docker
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")

@@ -3,43 +3,28 @@ OpsPilot — Maintenance Record Model
 =====================================
 """
 
+from typing import Optional
 import uuid
 from datetime import datetime
-
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from pydantic import Field
+from app.models.base import BaseDocument
 
 
-class MaintenanceRecord(Base, UUIDMixin, TimestampMixin):
-    __tablename__ = "maintenance_records"
+class MaintenanceRecord(BaseDocument):
+    title: str = Field(index=True)
+    description: Optional[str] = None
+    maintenance_type: str  # preventive | corrective | predictive
+    status: str = "scheduled"  # scheduled | in_progress | completed | cancelled
+    cost: Optional[float] = None
 
-    title: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    maintenance_type: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # preventive | corrective | predictive
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="scheduled"
-    )  # scheduled | in_progress | completed | cancelled
-    cost: Mapped[float | None] = mapped_column(Float, nullable=True)
+    scheduled_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
 
-    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    asset_id: uuid.UUID
+    performed_by: Optional[uuid.UUID] = None
 
-    # Foreign keys
-    asset_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False
-    )
-    performed_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
-    )
-
-    # Relationships
-    asset = relationship("Asset", back_populates="maintenance_records")
-    performer = relationship("User", foreign_keys=[performed_by])
+    class Settings:
+        name = "maintenance_records"
 
     def __repr__(self) -> str:
         return f"<MaintenanceRecord {self.title} ({self.maintenance_type})>"

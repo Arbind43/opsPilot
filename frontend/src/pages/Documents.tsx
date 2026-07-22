@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import api from '@/lib/api';
 import {
   FileUp, File, CheckCircle2, AlertCircle, Loader2,
@@ -10,7 +9,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 
-const STATUS_CONFIG: Record<string, { icon: JSX.Element; label: string; cls: string }> = {
+const STATUS_CONFIG: Record<string, { icon: React.ReactElement; label: string; cls: string }> = {
   completed: {
     icon: <CheckCircle2 size={13} className="text-emerald-400" />,
     label: 'Completed',
@@ -67,10 +66,17 @@ export default function Documents() {
     fetchGaps();
   }, []);
 
+  const MAX_FILE_SIZE_MB = 50;
+
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (!acceptedFiles.length) return;
     setUploading(true);
     for (const file of acceptedFiles) {
+      // Client-side file size check
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        toast.error(`${file.name} exceeds the ${MAX_FILE_SIZE_MB}MB limit`);
+        continue;
+      }
       const formData = new FormData();
       formData.append('file', file);
       try {
@@ -79,7 +85,8 @@ export default function Documents() {
         });
         toast.success(`Uploaded ${file.name}`);
       } catch (error: any) {
-        toast.error(`Failed: ${file.name}`);
+        const detail = error?.response?.data?.detail || error?.message || 'Unknown error';
+        toast.error(`Failed to upload "${file.name}": ${detail}`);
       }
     }
     setUploading(false);
@@ -88,13 +95,27 @@ export default function Documents() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    // Accept all supported document types — including legacy formats whose MIME
+    // types browsers may misreport (e.g. .doc as application/octet-stream).
     accept: {
       'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.ms-excel': ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/csv': ['.csv'],
       'image/png': ['.png'],
       'image/jpeg': ['.jpg', '.jpeg'],
       'text/plain': ['.txt'],
+      // Catch-all for files whose MIME type the browser reports incorrectly
+      'application/octet-stream': ['.doc', '.xls', '.xlsx', '.docx'],
+    },
+    maxSize: MAX_FILE_SIZE_MB * 1024 * 1024,
+    onDropRejected: (fileRejections) => {
+      fileRejections.forEach(({ file, errors }) => {
+        const reason = errors.map(e => e.message).join(', ');
+        toast.error(`"${file.name}" rejected: ${reason}`);
+      });
     },
   });
 
@@ -163,7 +184,7 @@ export default function Documents() {
                     <p className="text-sm font-medium text-slate-300">
                       {isDragActive ? 'Drop files here' : 'Click or drag & drop'}
                     </p>
-                    <p className="text-xs text-slate-600 mt-0.5">PDF, DOCX, XLSX, PNG, JPG, TXT</p>
+                    <p className="text-xs text-slate-600 mt-0.5">PDF, DOC, DOCX, XLS, XLSX, CSV, PNG, JPG, TXT · Max 50 MB</p>
                   </div>
                   {!isDragActive && (
                     <span className="text-xs px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">

@@ -12,12 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
 from app.core.security import decode_access_token
-from app.db.session import get_db_session
 from app.models.user import User
 from app.repositories.user_repo import UserRepository
-
-# Re-export for convenience
-get_db = get_db_session
 
 # Bearer token scheme
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -45,11 +41,10 @@ async def get_current_user_id(
 
 
 async def get_current_user(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db_session),
+    user_id: str = Depends(get_current_user_id)
 ) -> User:
     """Return the full User model for the authenticated user."""
-    repo = UserRepository(db)
+    repo = UserRepository()
     user = await repo.get_by_id(user_id)
     if user is None:
         raise HTTPException(
