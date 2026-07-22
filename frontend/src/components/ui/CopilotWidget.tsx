@@ -53,7 +53,9 @@ function SourcesPill({ context }: { context: any[] }) {
             <div key={i} className="flex items-start gap-2 text-xs text-slate-500">
               <Database size={10} className="mt-0.5 text-blue-400 shrink-0" />
               <div className="flex flex-col gap-1 w-full">
-                <span className="line-clamp-2 italic text-slate-400 text-[11px]">"{src.content?.slice(0, 150)}..."</span>
+                <span className="italic text-slate-400 text-[11px] whitespace-pre-wrap break-words">
+                  "{src.content}"
+                </span>
                 
                 <div className="flex flex-wrap items-center gap-2 mt-0.5">
                   {(src.metadata?.document_id || src.metadata?.file_name) && (
@@ -78,7 +80,7 @@ function SourcesPill({ context }: { context: any[] }) {
           {graphSources.map((src, i) => (
             <div key={i} className="flex items-start gap-2 text-xs text-slate-500">
               <Network size={10} className="mt-0.5 text-violet-400 shrink-0" />
-              <span className="italic text-slate-400">Graph: {src.content?.slice(0, 120)}</span>
+              <span className="italic text-slate-400 whitespace-pre-wrap break-words">Graph: {src.content}</span>
             </div>
           ))}
         </div>
