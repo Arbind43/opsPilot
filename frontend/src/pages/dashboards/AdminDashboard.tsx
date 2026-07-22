@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import api from '@/lib/api';
 import {
@@ -245,9 +246,9 @@ export default function AdminDashboard() {
                   <CardDescription className="text-xs mt-0.5">Active user sessions</CardDescription>
                 </div>
               </div>
-              <button className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
+              <Link to="/settings" className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
                 Manage <ArrowUpRight size={11} />
-              </button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent className="pt-4">
