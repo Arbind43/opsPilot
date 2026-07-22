@@ -63,30 +63,53 @@ class ComplianceAgent:
 
     async def generate_report(self, active_incidents: int, pending_maint: int) -> dict:
         """Generates a structured compliance report using AI."""
+        
+        # 1. Retrieve compliance policies and recent documents
+        search_query = "regulatory compliance standards policies safety guidelines requirements"
+        context_items = await self.retriever.retrieve_context(search_query, top_k=5)
+        
+        context_text = "No specific regulatory documents found."
+        if context_items:
+            context_parts = []
+            for i, item in enumerate(context_items, 1):
+                source = item.get("source", item.get("type", "Knowledge Base"))
+                content = item.get("content", "")
+                context_parts.append(f"[{i}] ({source})\n{content}")
+            context_text = "\n\n".join(context_parts)
+
         llm = get_llm(temperature=0.1)
         structured_llm = llm.with_structured_output(ComplianceReport)
         
         prompt = ChatPromptTemplate.from_template(
-            "You are the AI Compliance Auditor for an enterprise platform. Based on the current system metrics, generate a compliance report.\n"
+            "You are the AI Compliance Auditor for an enterprise platform. Based on the current system metrics and actual uploaded regulatory documents, generate a compliance report.\n\n"
+            "Context from Regulatory Knowledge Base:\n{context}\n\n"
+            "Current Operational State:\n"
             "Active Critical Incidents: {incidents}\n"
             "Pending Tasks: {maint}\n\n"
-            "Evaluate against relevant quality and operational standards (e.g. ISO 9001, industry-specific frameworks). "
-            "If there are critical incidents, the quality standard should probably be non-compliant. "
-            "If there are many pending tasks, operational safety standards might be a warning.\n"
+            "Evaluate the operational state against the provided regulatory standards and clauses in the knowledge base. "
+            "If there are critical incidents, the corresponding quality or safety standards might be non-compliant. "
+            "If there are many pending tasks, operational safety standards might be a warning. "
+            "Make sure to cite the specific standard and clause from the context if possible.\n"
             "Return a structured JSON report."
         )
         chain = prompt | structured_llm
         
         try:
-            result = await chain.ainvoke({"incidents": active_incidents, "maint": pending_maint})
-            return result.model_dump()
+            result = await chain.ainvoke({
+                "context": context_text,
+                "incidents": active_incidents, 
+                "maint": pending_maint
+            })
+            report_dict = result.model_dump()
+            report_dict["context_used"] = context_items
+            return report_dict
         except Exception as e:
             logger.error(f"Compliance report generation failed: {e}")
             return {
                 "overall_score": 50,
                 "status": "warning",
                 "evaluations": [
-                    {"standard": "System", "clause": "AI Audit", "status": "warning", "details": "AI audit failed due to API limits."}
+                    {"standard": "System", "clause": "AI Audit", "status": "warning", "details": "AI audit failed due to API limits or parsing errors."}
                 ]
             }
 

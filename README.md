@@ -2,6 +2,10 @@
 
 **Enterprise Knowledge Intelligence Platform**
 
+## 🌐 Live Links
+- **Frontend (Live)**: [https://ops-pilot-hjur.vercel.app](https://ops-pilot-hjur.vercel.app)
+- **Backend (API)**: [https://opspilot-1-bwho.onrender.com](https://opspilot-1-bwho.onrender.com)
+
 OpsPilot AI is an advanced, AI-powered knowledge management and operational intelligence platform designed for modern enterprises. It provides real-time insights, predictive resource management, and automated root-cause analysis (RCA) by leveraging a Hybrid RAG Engine (Vector Database + Knowledge Graph).
 
 ## 🌟 Key Features

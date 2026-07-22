@@ -111,6 +111,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Global Ctrl+K / Cmd+K to open Copilot
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCopilot(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const initials = user?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
@@ -298,11 +310,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
-                placeholder="Ask Copilot..."
+                placeholder="Ask Copilot... (Ctrl+K)"
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
                 className="w-full h-8 pl-8 pr-3 text-xs bg-white/5 border border-white/8 rounded-lg text-slate-300 placeholder-slate-600
                            focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/40 focus:bg-white/8 transition-all"
+                onClick={() => setShowCopilot(true)}
               />
             </div>
 

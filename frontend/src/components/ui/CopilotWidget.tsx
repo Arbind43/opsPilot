@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import {
   Send, Bot, User, Loader2, Sparkles, Database, Network, BookOpen,
-  ChevronDown, ChevronUp, Copy, Check, X
+  ChevronDown, ChevronUp, Copy, Check, X, Mic, MicOff
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuthStore } from '@/store/authStore';
@@ -107,12 +107,54 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    
+    // @ts-ignore - Web Speech API
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    
+    recognition.onresult = (event: any) => {
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setInput(transcript);
+    };
+    
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+    };
+    
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+    
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
 
   const handleSend = async (query?: string) => {
     const userMessage = (query || input).trim();
@@ -332,6 +374,17 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
               disabled={loading}
             />
           </div>
+          <Button
+            onClick={toggleListening}
+            size="icon"
+            variant="ghost"
+            className={`h-10 w-10 shrink-0 rounded-lg transition-colors ${
+              isListening ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'
+            }`}
+            title={isListening ? "Stop listening" : "Start voice input"}
+          >
+            {isListening ? <MicOff size={14} className="animate-pulse" /> : <Mic size={14} />}
+          </Button>
           <Button
             onClick={() => handleSend()}
             disabled={!input.trim() || loading}

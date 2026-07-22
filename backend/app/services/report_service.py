@@ -51,9 +51,12 @@ class ReportService:
         try:
             from ai.agents.report_agent import ReportAgent
             agent = ReportAgent()
-            executive_summary = await agent.generate_executive_summary(data_payload)
+            report_result = await agent.generate_executive_summary(data_payload)
+            executive_summary = report_result.get("executive_summary", "Summary unavailable.")
+            recommendations = report_result.get("recommendations", [])
         except Exception as e:
             executive_summary = f"Summary generation failed: {str(e)}"
+            recommendations = ["Review system logs for errors."]
 
         # 3. Construct report data
         report_data = {
@@ -61,10 +64,7 @@ class ReportService:
             "type": data.get("report_type", "summary"),
             "executive_summary": executive_summary,
             "metrics": {"uptime": "99.8%", "incidents": incidents_count},
-            "recommendations": [
-                "Conduct routine visual inspection.",
-                "Check log anomalies.",
-            ],
+            "recommendations": recommendations,
         }
 
         report = Report(
