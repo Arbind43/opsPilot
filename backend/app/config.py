@@ -86,8 +86,8 @@ class Settings(BaseSettings):
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
 
     GOOGLE_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-pro"
-    GEMINI_EMBEDDING_MODEL: str = "models/text-embedding-004"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
 
     LLM_PROVIDER: str = "gemini"  # "openai", "gemini", or "groq"
     EMBEDDING_PROVIDER: str = "gemini"  # "openai" or "gemini"

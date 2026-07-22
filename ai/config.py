@@ -4,13 +4,22 @@ OpsPilot — AI Configuration
 AI-specific settings for LLM, embedding, and pipeline parameters.
 """
 
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Walk up from this file (ai/config.py) to find the project-root .env
+_HERE = Path(__file__).resolve()
+_ENV_FILE = next(
+    (str(p / ".env") for p in [_HERE.parent, _HERE.parents[1], _HERE.parents[2]]
+     if (p / ".env").exists()),
+    ".env",
+)
 
 
 class AISettings(BaseSettings):
     """AI-specific settings loaded from environment."""
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -22,8 +31,8 @@ class AISettings(BaseSettings):
 
     # ── Google Gemini ─────────────────────────────────
     GOOGLE_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-pro"
-    GEMINI_EMBEDDING_MODEL: str = "models/text-embedding-004"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
 
     # ── OpenAI ────────────────────────────────────────
     OPENAI_API_KEY: str = ""
