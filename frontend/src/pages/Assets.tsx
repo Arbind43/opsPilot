@@ -7,78 +7,6 @@ import {
   Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp,
 } from 'lucide-react';
 
-// ─── Demo seed data shown when DB is empty ─────────────────────────────────
-const DEMO_TREE = [
-  {
-    id: 'demo-plant-1', name: 'Main Manufacturing Plant', asset_type: 'plant', status: 'operational',
-    parent_id: null,
-    children: [
-      {
-        id: 'demo-area-1', name: 'Production Line A', asset_type: 'area', status: 'operational', parent_id: 'demo-plant-1',
-        children: [
-          { id: 'demo-eq-1', name: 'Hydraulic Press #1', asset_type: 'equipment', status: 'operational', parent_id: 'demo-area-1', children: [] },
-          { id: 'demo-eq-2', name: 'Conveyor Belt Unit', asset_type: 'equipment', status: 'maintenance', parent_id: 'demo-area-1', children: [] },
-          { id: 'demo-eq-3', name: 'Cooling Tower CT-01', asset_type: 'equipment', status: 'warning', parent_id: 'demo-area-1', children: [] },
-        ],
-      },
-      {
-        id: 'demo-area-2', name: 'Quality Control Bay', asset_type: 'area', status: 'operational', parent_id: 'demo-plant-1',
-        children: [
-          { id: 'demo-eq-4', name: 'Ultrasonic Scanner', asset_type: 'equipment', status: 'operational', parent_id: 'demo-area-2', children: [] },
-          { id: 'demo-eq-5', name: 'Vision Inspection Rig', asset_type: 'equipment', status: 'operational', parent_id: 'demo-area-2', children: [] },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'demo-plant-2', name: 'Logistics & Warehousing Hub', asset_type: 'plant', status: 'operational',
-    parent_id: null,
-    children: [
-      {
-        id: 'demo-area-3', name: 'Cold Storage Zone', asset_type: 'area', status: 'warning', parent_id: 'demo-plant-2',
-        children: [
-          { id: 'demo-eq-6', name: 'Refrigeration Unit R-1', asset_type: 'equipment', status: 'warning', parent_id: 'demo-area-3', children: [] },
-          { id: 'demo-eq-7', name: 'Temp Monitoring Sensors', asset_type: 'component', status: 'operational', parent_id: 'demo-area-3', children: [] },
-        ],
-      },
-    ],
-  },
-];
-
-const DEMO_DETAILS: Record<string, any> = {
-  'demo-plant-1': { id: 'demo-plant-1', name: 'Main Manufacturing Plant', asset_type: 'plant', status: 'operational', location: 'Site A, Sector 4', serial_number: 'PLT-001', description: 'Primary manufacturing facility with 4 production lines. Operates 24/7 with ISO 9001 compliance.', metadata_json: { capacity: '500 units/day', employees: '240', commissioned: '2018-03', area_sqft: '120,000' } },
-  'demo-area-1': { id: 'demo-area-1', name: 'Production Line A', asset_type: 'area', status: 'operational', location: 'Building 1, Floor 2', serial_number: 'LA-001', description: 'High-throughput production line for primary assembly operations.', metadata_json: { throughput: '150 units/hr', shift: '3-shift', line_speed: '2.4 m/s' } },
-  'demo-eq-1': { id: 'demo-eq-1', name: 'Hydraulic Press #1', asset_type: 'equipment', status: 'operational', location: 'Bay 1, Station 4', serial_number: 'HP-001', description: '500-ton hydraulic press for metal stamping operations. Last serviced 3 months ago.', metadata_json: { max_pressure: '500 tons', cycle_time: '8 sec', manufacturer: 'Schuler AG', year: '2019' } },
-  'demo-eq-2': { id: 'demo-eq-2', name: 'Conveyor Belt Unit', asset_type: 'equipment', status: 'maintenance', location: 'Bay 2, Corridor B', serial_number: 'CB-012', description: 'Main assembly conveyor. Currently in scheduled maintenance for belt replacement.', metadata_json: { belt_length: '120m', speed: '0.8 m/s', load_capacity: '200 kg/m' } },
-  'demo-eq-3': { id: 'demo-eq-3', name: 'Cooling Tower CT-01', asset_type: 'equipment', status: 'warning', location: 'Rooftop, North Wing', serial_number: 'CT-001', description: 'Industrial cooling tower. Vibration anomaly detected — monitoring in progress.', metadata_json: { cooling_capacity: '2MW', flow_rate: '800 L/min', last_inspection: '2024-11-10' } },
-  'demo-eq-4': { id: 'demo-eq-4', name: 'Ultrasonic Scanner', asset_type: 'equipment', status: 'operational', location: 'QC Bay, Station 1', serial_number: 'US-003', description: 'Non-destructive testing scanner for weld and material integrity checks.', metadata_json: { frequency: '2-10 MHz', resolution: '0.1mm', calibrated: '2025-01-15' } },
-  'demo-eq-5': { id: 'demo-eq-5', name: 'Vision Inspection Rig', asset_type: 'equipment', status: 'operational', location: 'QC Bay, Station 3', serial_number: 'VI-007', description: 'AI-powered camera inspection system for defect detection at line speed.', metadata_json: { cameras: '8x 12MP', fps: '120', accuracy: '99.7%', ai_model: 'OpticNet v2' } },
-  'demo-plant-2': { id: 'demo-plant-2', name: 'Logistics & Warehousing Hub', asset_type: 'plant', status: 'operational', location: 'Site B, Industrial Park', serial_number: 'PLT-002', description: 'Central logistics facility handling inbound raw materials and outbound finished goods.', metadata_json: { capacity: '5000 pallets', area_sqft: '80,000', dock_doors: '24', wms: 'SAP EWM' } },
-  'demo-area-3': { id: 'demo-area-3', name: 'Cold Storage Zone', asset_type: 'area', status: 'warning', location: 'Building 3, East Wing', serial_number: 'CS-001', description: 'Temperature-controlled storage for perishable raw materials. Temperature drift detected.', metadata_json: { temperature: '-18°C', volume: '2000 m³', zones: '4' } },
-  'demo-eq-6': { id: 'demo-eq-6', name: 'Refrigeration Unit R-1', asset_type: 'equipment', status: 'warning', location: 'Cold Storage, Compressor Room', serial_number: 'REF-001', description: 'Primary compressor unit for cold storage. Showing elevated temperature readings — inspection scheduled.', metadata_json: { refrigerant: 'R-404A', capacity: '500kW', age_years: '7', last_service: '2024-08-20' } },
-  'demo-eq-7': { id: 'demo-eq-7', name: 'Temp Monitoring Sensors', asset_type: 'component', status: 'operational', location: 'Cold Storage, All Zones', serial_number: 'TMS-012', description: 'IoT sensor network monitoring temperature and humidity across all cold storage zones.', metadata_json: { sensors: '48 units', protocol: 'MQTT', sampling: '60s', alerts: 'Email + SMS' } },
-};
-
-const DEMO_TIMELINE: Record<string, any[]> = {
-  'demo-eq-3': [
-    { id: 't1', type: 'incident', title: 'Vibration anomaly detected (Level 3)', status: 'investigating', severity: 'high', timestamp: new Date(Date.now() - 2 * 3600000).toISOString() },
-    { id: 't2', type: 'maintenance', title: 'Quarterly inspection completed', status: 'completed', maintenance_type: 'preventive', timestamp: new Date(Date.now() - 30 * 86400000).toISOString() },
-  ],
-  'demo-eq-2': [
-    { id: 't3', type: 'maintenance', title: 'Belt replacement — In progress', status: 'in_progress', maintenance_type: 'corrective', timestamp: new Date(Date.now() - 86400000).toISOString() },
-  ],
-  'demo-eq-6': [
-    { id: 't4', type: 'incident', title: 'Temperature drift +2.1°C above threshold', status: 'open', severity: 'medium', timestamp: new Date(Date.now() - 6 * 3600000).toISOString() },
-    { id: 't5', type: 'maintenance', title: 'Refrigerant top-up and leak check', status: 'scheduled', maintenance_type: 'preventive', timestamp: new Date(Date.now() + 2 * 86400000).toISOString() },
-  ],
-};
-
-const DEMO_PREDICTIVE: Record<string, any> = {
-  'demo-eq-1': { failure_risk_score: 18, trend: 'stable', recommendations: ['Continue current maintenance schedule', 'Monitor hydraulic pressure quarterly', 'No immediate action required'] },
-  'demo-eq-2': { failure_risk_score: 62, trend: 'improving', recommendations: ['Complete belt replacement on schedule', 'Lubricate drive rollers post-maintenance', 'Schedule load test after maintenance window'] },
-  'demo-eq-3': { failure_risk_score: 81, trend: 'worsening', recommendations: ['Schedule vibration analysis within 48 hours', 'Check bearing alignment and lubrication', 'Consider temporary load reduction pending inspection', 'Prepare contingency cooling plan'] },
-  'demo-eq-6': { failure_risk_score: 74, trend: 'worsening', recommendations: ['Inspect refrigerant levels immediately', 'Check compressor bearings for wear', 'Verify condenser coil cleanliness', 'Escalate if temperature drift exceeds 3°C'] },
-};
 
 // ─── Type icons ───────────────────────────────────────────────────────────
 const TYPE_ICON: Record<string, any> = {
@@ -159,31 +87,26 @@ const riskLabel  = (score: number) => score > 75 ? 'HIGH RISK' : score > 40 ? 'M
 
 export default function Assets() {
   const [treeData, setTreeData]           = useState<any[]>([]);
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>('demo-plant-1');
-  const [assetDetails, setAssetDetails]   = useState<any>(DEMO_DETAILS['demo-plant-1']);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [assetDetails, setAssetDetails]   = useState<any>(null);
   const [timeline, setTimeline]           = useState<any[]>([]);
   const [predictiveAnalysis, setPredictiveAnalysis] = useState<any>(null);
   const [loading, setLoading]             = useState(true);
   const [loadingPredictive, setLoadingPredictive]   = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isDemo, setIsDemo]               = useState(false);
   const [newAsset, setNewAsset]           = useState({
     name: '', asset_type: 'equipment', location: '', serial_number: '', description: '',
   });
 
-  // Fetch or fallback to demo ──────────────────────────────────────────────
+  // Fetch tree ──────────────────────────────────────────────
   useEffect(() => {
     const fetchTree = async () => {
       try {
         const res = await api.get('/assets/tree');
         const nodes = res.data.children ?? [];
-        if (nodes.length === 0) throw new Error('empty');
         setTreeData(nodes);
-        setIsDemo(false);
-        setAssetDetails(null);
       } catch {
-        setTreeData(DEMO_TREE);
-        setIsDemo(true);
+        console.error('Failed to load asset tree');
       } finally {
         setLoading(false);
       }
@@ -194,20 +117,6 @@ export default function Assets() {
   // Select asset ────────────────────────────────────────────────────────────
   const handleSelect = async (id: string) => {
     setSelectedAssetId(id);
-
-    if (isDemo) {
-      const det = DEMO_DETAILS[id];
-      setAssetDetails(det ?? null);
-      setTimeline(DEMO_TIMELINE[id] ?? []);
-      const pred = DEMO_PREDICTIVE[id];
-      if (pred) {
-        setLoadingPredictive(true);
-        setTimeout(() => { setPredictiveAnalysis(pred); setLoadingPredictive(false); }, 900);
-      } else {
-        setPredictiveAnalysis(null);
-      }
-      return;
-    }
 
     try {
       const [detailRes, timelineRes] = await Promise.all([
@@ -230,15 +139,10 @@ export default function Assets() {
   useEffect(() => {
     if (selectedAssetId) handleSelect(selectedAssetId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDemo]);
+  }, []);
 
   const handleAddAsset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isDemo) {
-      alert('Demo mode: connect your backend to add real resources.');
-      setIsAddModalOpen(false);
-      return;
-    }
     try {
       await api.post('/assets', newAsset);
       setIsAddModalOpen(false);
@@ -267,12 +171,6 @@ export default function Assets() {
           <div className="flex items-center gap-2 mb-1">
             <div className="w-1.5 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, #f59e0b, #f97316)' }} />
             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Resources</span>
-            {isDemo && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full ml-1"
-                style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)' }}>
-                Demo Data
-              </span>
-            )}
           </div>
           <h1 className="text-2xl font-extrabold text-slate-100 tracking-tight">Resource Management</h1>
         </div>
@@ -297,7 +195,7 @@ export default function Assets() {
               <FolderTree size={12} style={{ color: '#f59e0b' }} />
             </div>
             <span className="text-xs font-bold text-slate-300">Resource Explorer</span>
-            <span className="ml-auto text-[10px] font-bold text-slate-600">{isDemo ? `${DEMO_TREE.length + 8}` : treeData.length} items</span>
+            <span className="ml-auto text-[10px] font-bold text-slate-600">{treeData.length} items</span>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-0.5 scrollbar-thin">
             {loading ? (
