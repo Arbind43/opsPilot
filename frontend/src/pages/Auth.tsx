@@ -456,6 +456,8 @@ export default function Auth() {
 
                   <InputField label="Password" id="su-password" type="password"
                     placeholder="Min. 8 characters" field={suPassword} />
+                  <InputField label="Confirm Password" id="su-confirm" type="password"
+                    placeholder="Repeat your password" field={suConfirm} />
                   
                   <div className="pt-2">
                     <SubmitButton loading={loading}>Sign Up</SubmitButton>
