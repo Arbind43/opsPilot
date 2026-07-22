@@ -80,8 +80,8 @@ npm run dev
 ```
 
 ### 3. Access the Application
-- **Web App**: http://localhost:5173
-- **Backend API Docs (Swagger)**: http://localhost:8000/docs
+- **Web App**:  https://ops-pilot-hjur.vercel.app
+- **Backend API Docs (Swagger)**: https://opspilot-1-bwho.onrender.com
 
 ## 🔐 Authentication
 OpsPilot supports a seamless authentication experience. You can:
