@@ -80,9 +80,7 @@ export default function Documents() {
       const formData = new FormData();
       formData.append('file', file);
       try {
-        await api.post('/documents/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await api.post('/documents/upload', formData);
         toast.success(`Uploaded ${file.name}`);
       } catch (error: any) {
         const detail = error?.response?.data?.detail || error?.message || 'Unknown error';
