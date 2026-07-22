@@ -180,7 +180,7 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
 
     try {
       const token = useAuthStore.getState().accessToken;
-      const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+      const apiUrl = 'https://opspilot-1-bwho.onrender.com/api/v1';
       const response = await fetch(`${apiUrl}/copilot/chat/stream`, {
         method: 'POST',
         headers: {
