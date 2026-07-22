@@ -105,26 +105,27 @@ class DocumentService:
 
     async def _process_in_background(self, document_id: str, file_path: str):
         import logging
+        import uuid as _uuid
+        from beanie.operators import Set
         from ai.pipeline.orchestrator import PipelineOrchestrator
         from app.models.document import Document
-        logger = logging.getLogger(__name__)
-        try:
-            doc = await Document.get(document_id)
-            if doc:
-                doc.processing_status = "processing"
-                await doc.save()
+        _logger = logging.getLogger(__name__)
 
+        doc_uuid = _uuid.UUID(document_id)
+
+        async def _set_status(status: str, error: str | None = None):
+            doc = await Document.find_one(Document.id == doc_uuid)
+            if doc:
+                update_data = {"processing_status": status}
+                if error:
+                    update_data["processing_error"] = error[:500]
+                await doc.update(Set(update_data))
+
+        try:
+            await _set_status("processing")
             orchestrator = PipelineOrchestrator()
             await orchestrator.process_document(document_id, file_path)
-
-            doc = await Document.get(document_id)
-            if doc:
-                doc.processing_status = "completed"
-                await doc.save()
+            await _set_status("completed")
         except Exception as e:
-            logger.error(f"Background processing failed: {e}")
-            doc = await Document.get(document_id)
-            if doc:
-                doc.processing_status = "failed"
-                doc.processing_error = str(e)[:500]
-                await doc.save()
+            _logger.error(f"Background processing failed for {document_id}: {e}")
+            await _set_status("failed", str(e))
