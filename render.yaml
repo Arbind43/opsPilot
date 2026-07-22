@@ -43,7 +43,7 @@ services:
       - key: REDIS_URL
         sync: false
       - key: CORS_ORIGINS
-        value: "https://opspilot-1-bwho.onrender.com,http://localhost:5173,http://localhost:3000"
+        value: "https://ops-pilot-three.vercel.app,https://ops-pilot-git-main-mundaarbind73-4443s-projects.vercel.app,http://localhost:5173,http://localhost:3000"
       - key: UPLOAD_DIR
         value: "./storage/uploads"
       - key: MAX_UPLOAD_SIZE_MB
