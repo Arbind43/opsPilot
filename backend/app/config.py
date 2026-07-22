@@ -6,9 +6,7 @@ All values are loaded from environment variables with sensible defaults.
 """
 
 from functools import lru_cache
-from typing import Any, List
-
-from pydantic import field_validator
+from typing import List
 
 from pathlib import Path
 
@@ -43,23 +41,22 @@ class Settings(BaseSettings):
     # ── Server ───────────────────────────────────────
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # Comma-separated list of allowed origins, e.g.:
+    # "https://myapp.onrender.com,http://localhost:5173"
+    # Using str (not List[str]) avoids pydantic-settings JSON-parse errors
+    # when Render injects the value as a plain environment variable string.
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
 
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v: Any) -> List[str]:
-        """Accept JSON array, comma-separated string, or list from env vars."""
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            v = v.strip()
-            # JSON array: '["a","b"]'
-            if v.startswith("["):
-                import json
-                return json.loads(v)
-            # Comma-separated: 'http://a.com,http://b.com'
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+    def get_cors_origins(self) -> List[str]:
+        """Return CORS_ORIGINS as a list — handles comma-separated or JSON array strings."""
+        raw = self.CORS_ORIGINS.strip()
+        if raw.startswith("["):
+            import json
+            try:
+                return json.loads(raw)
+            except Exception:
+                pass
+        return [o.strip().strip('"').strip("'") for o in raw.split(",") if o.strip()]
 
     # ── Auth / JWT ───────────────────────────────────
     SECRET_KEY: str = "change-me-to-a-random-64-char-string"
