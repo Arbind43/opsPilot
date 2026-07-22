@@ -53,6 +53,34 @@ async def on_startup() -> None:
 
     logger.info("startup_complete")
 
+    # Recover any documents that were stuck in 'processing' due to a server crash
+    try:
+        from app.models.document import Document
+        from beanie.operators import Set
+        stuck = await Document.find(Document.processing_status == "processing").to_list()
+        if stuck:
+            logger.warning("recovering_stuck_documents", count=len(stuck))
+            for doc in stuck:
+                await doc.update(Set({"processing_status": "pending"}))
+            # Re-trigger processing for recovered docs in the background
+            import asyncio
+            from ai.pipeline.orchestrator import PipelineOrchestrator
+            async def _retry(doc_id, file_path):
+                from beanie.operators import Set as _Set
+                from app.models.document import Document as _Doc
+                import uuid as _uuid
+                try:
+                    await _Doc.find_one(_Doc.id == _uuid.UUID(doc_id)).update(_Set({"processing_status": "processing"}))
+                    await PipelineOrchestrator().process_document(doc_id, file_path)
+                    await _Doc.find_one(_Doc.id == _uuid.UUID(doc_id)).update(_Set({"processing_status": "completed"}))
+                except Exception as ex:
+                    logger.error("recovery_failed", doc_id=doc_id, error=str(ex))
+                    await _Doc.find_one(_Doc.id == _uuid.UUID(doc_id)).update(_Set({"processing_status": "failed", "processing_error": str(ex)[:500]}))
+            for doc in stuck:
+                asyncio.ensure_future(_retry(str(doc.id), doc.file_path))
+    except Exception as e:
+        logger.warning("startup_recovery_failed", error=str(e))
+
 
 async def on_shutdown() -> None:
     """Called when the application shuts down."""

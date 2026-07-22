@@ -118,6 +118,29 @@ async def get_document(
     return doc
 
 
+@router.post("/{doc_id}/retry", response_model=DocumentResponse, summary="Retry processing for a stuck document")
+async def retry_document(
+    doc_id: UUID,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_current_user_id),
+):
+    service = DocumentService()
+    doc = await service.get_document(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.processing_status == "completed":
+        raise HTTPException(status_code=400, detail="Document is already completed")
+    # Reset to pending and re-trigger
+    from beanie.operators import Set
+    from app.models.document import Document
+    import uuid
+    db_doc = await Document.find_one(Document.id == uuid.UUID(str(doc_id)))
+    if db_doc:
+        await db_doc.update(Set({"processing_status": "pending", "processing_error": None}))
+    background_tasks.add_task(service._process_in_background, str(doc_id), doc.file_path)
+    return await service.get_document(doc_id)
+
+
 @router.delete("/{doc_id}", status_code=204, summary="Delete a document")
 async def delete_document(
     doc_id: UUID,
