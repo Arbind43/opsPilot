@@ -46,10 +46,11 @@ class DocumentService:
         await self.repo.delete(doc)
         return True
 
-    async def upload_document(self, file: UploadFile, user_id: UUID, asset_id: UUID | None = None) -> Document:
+    async def upload_document(self, file: UploadFile, user_id: UUID, background_tasks: "fastapi.BackgroundTasks", asset_id: UUID | None = None) -> Document:
         """
         Save uploaded file to disk, create database record, and trigger processing.
         """
+        import fastapi
         filename = file.filename or "unnamed_file"
         if not validate_file_extension(filename):
             raise BadRequestError(
@@ -97,11 +98,33 @@ class DocumentService:
 
         saved_doc = await self.repo.create(doc)
 
-        # Trigger Celery background task for AI Pipeline
-        try:
-            from worker.tasks.document_tasks import process_document_task
-            process_document_task.delay(str(saved_doc.id), saved_doc.file_path)
-        except Exception:
-            pass  # Worker may not be running locally; doc is still saved
+        # Trigger background task for AI Pipeline using FastAPI BackgroundTasks
+        background_tasks.add_task(self._process_in_background, str(saved_doc.id), saved_doc.file_path)
 
         return saved_doc
+
+    async def _process_in_background(self, document_id: str, file_path: str):
+        import logging
+        from ai.pipeline.orchestrator import PipelineOrchestrator
+        from app.models.document import Document
+        logger = logging.getLogger(__name__)
+        try:
+            doc = await Document.get(document_id)
+            if doc:
+                doc.processing_status = "processing"
+                await doc.save()
+
+            orchestrator = PipelineOrchestrator()
+            await orchestrator.process_document(document_id, file_path)
+
+            doc = await Document.get(document_id)
+            if doc:
+                doc.processing_status = "completed"
+                await doc.save()
+        except Exception as e:
+            logger.error(f"Background processing failed: {e}")
+            doc = await Document.get(document_id)
+            if doc:
+                doc.processing_status = "failed"
+                doc.processing_error = str(e)[:500]
+                await doc.save()

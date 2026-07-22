@@ -6,7 +6,7 @@ Handling document uploads and list operations.
 
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 
 from app.schemas.document import DocumentResponse
 from app.services.document_service import DocumentService
@@ -93,13 +93,14 @@ async def get_knowledge_gaps(
 
 @router.post("/upload", response_model=DocumentResponse, status_code=201, summary="Upload a document")
 async def upload_document(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     asset_id: Optional[UUID] = Form(None),
     user_id: UUID = Depends(get_current_user_id),
 ):
     service = DocumentService()
     try:
-        doc = await service.upload_document(file=file, user_id=user_id, asset_id=asset_id)
+        doc = await service.upload_document(file=file, user_id=user_id, background_tasks=background_tasks, asset_id=asset_id)
         return doc
     except BadRequestError as e:
         raise HTTPException(status_code=400, detail=e.message)
