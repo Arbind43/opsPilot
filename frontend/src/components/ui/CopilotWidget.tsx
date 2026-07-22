@@ -374,17 +374,25 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
               disabled={loading}
             />
           </div>
-          <Button
-            onClick={toggleListening}
-            size="icon"
-            variant="ghost"
-            className={`h-10 w-10 shrink-0 rounded-lg transition-colors ${
-              isListening ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'
-            }`}
-            title={isListening ? "Stop listening" : "Start voice input"}
-          >
-            {isListening ? <MicOff size={14} className="animate-pulse" /> : <Mic size={14} />}
-          </Button>
+          <div className="relative flex items-center justify-center">
+            {isListening && (
+              <>
+                <div className="absolute inset-0 rounded-lg bg-red-500/40 animate-ping opacity-75" />
+                <div className="absolute inset-[-4px] rounded-lg border border-red-500/50 animate-pulse" />
+              </>
+            )}
+            <Button
+              onClick={toggleListening}
+              size="icon"
+              variant="ghost"
+              className={`relative z-10 h-10 w-10 shrink-0 rounded-lg transition-colors ${
+                isListening ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300' : 'text-slate-400 hover:text-slate-200 hover:bg-white/10'
+              }`}
+              title={isListening ? "Stop listening" : "Start voice input"}
+            >
+              {isListening ? <Mic size={14} className="animate-pulse" /> : <Mic size={14} />}
+            </Button>
+          </div>
           <Button
             onClick={() => handleSend()}
             disabled={!input.trim() || loading}
