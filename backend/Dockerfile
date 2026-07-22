@@ -1,9 +1,13 @@
+# ── OpsPilot Backend — Dockerfile ─────────────────────────────────────────
+# Build context is the repo ROOT (not backend/).
+# Render: set "Root Directory" to "." and "Dockerfile Path" to "backend/Dockerfile"
+#
 # ── Stage 1: Builder ──────────────────────────────────────────────────────
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies needed for PDF/image processing
+# System dependencies needed for PDF/image processing and OCR
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgl1 \
@@ -30,25 +34,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder
+# Copy installed Python packages from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-# backend/ contains the FastAPI app
+# backend/ contains the FastAPI app; ai/ contains the pipeline
 COPY backend/ ./backend/
-# ai/ contains the pipeline (imported from project root)
 COPY ai/ ./ai/
 
-# Create uploads directory
+# Create storage directory for uploads
 RUN mkdir -p ./backend/storage/uploads
 
-# Set PYTHONPATH so both 'app' and 'ai' packages are resolvable
+# Set PYTHONPATH so both 'app' (in backend/) and 'ai' (in root) packages resolve
 ENV PYTHONPATH="/app/backend:/app"
 
 WORKDIR /app/backend
 
 EXPOSE 8000
 
-# Use 2 workers — tune based on your cloud plan's RAM
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
