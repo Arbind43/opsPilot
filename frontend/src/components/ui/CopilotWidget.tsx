@@ -123,7 +123,8 @@ export default function CopilotWidget({ onClose }: { onClose: () => void }) {
 
     try {
       const token = useAuthStore.getState().accessToken;
-      const response = await fetch('http://localhost:8000/api/v1/copilot/chat/stream', {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+      const response = await fetch(`${apiUrl}/copilot/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
