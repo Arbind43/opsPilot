@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import {
   Send, Bot, User, Loader2, Sparkles, Database, Network, BookOpen,
-  ChevronDown, ChevronUp, Copy, Check, X, Mic, MicOff
+  ChevronDown, ChevronUp, Copy, Check, X, Mic
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuthStore } from '@/store/authStore';
