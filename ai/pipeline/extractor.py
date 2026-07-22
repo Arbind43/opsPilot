@@ -100,62 +100,67 @@ class KnowledgeExtractor:
         })
 
         sections = parsed_doc.get("sections", [])
-        chain = self._get_chain()
         
-        semaphore = asyncio.Semaphore(5)
-
-        async def process_section(section):
+        # We add the section nodes immediately
+        for section in sections:
             header = section.get("header", "Section")
-            content = section.get("content", "")
-            
-            section_entities = []
-            section_relations = []
-            
-            if not content or len(content) < 50:
-                return section_entities, section_relations
+            all_entities.append({
+                "id": f"{doc_title}::{header}",
+                "label": "Section",
+                "properties": {"name": header, "document": doc_title}
+            })
+            all_relations.append({
+                "source": doc_title,
+                "target": f"{doc_title}::{header}",
+                "type": "HAS_SECTION",
+                "properties": {}
+            })
 
-            # Truncate very long sections to fit token limits
-            text_chunk = content[:3000]
+        # Combine text to reduce API calls and avoid strict rate limits (RPM/TPM)
+        full_text = "\n\n".join(sec.get("content", "") for sec in sections if sec.get("content", ""))
+        if not full_text:
+            # Fallback if no sections
+            full_text = parsed_doc.get("content", "")
+            
+        if not full_text or len(full_text) < 50:
+            return {
+                "entities": self._deduplicate_entities(all_entities),
+                "relations": self._deduplicate_relations(all_relations),
+            }
 
+        # Chunk the full text into blocks of ~12000 chars (approx 3000 tokens)
+        chunk_size = 12000
+        text_blocks = [full_text[i:i+chunk_size] for i in range(0, len(full_text), chunk_size)]
+        
+        chain = self._get_chain()
+        semaphore = asyncio.Semaphore(3) # Max 3 concurrent to stay well within TPM/RPM limits
+
+        async def process_block(text_block):
+            block_entities, block_relations = [], []
             async with semaphore:
                 try:
-                    raw = await chain.ainvoke({"text": text_chunk})
-                    # Clean the response — sometimes model wraps in ```json
+                    raw = await chain.ainvoke({"text": text_block})
                     raw = raw.strip()
                     if raw.startswith("```"):
                         raw = raw.split("```")[1]
                         if raw.startswith("json"):
                             raw = raw[4:]
                     data = json.loads(raw)
-                    section_entities.extend(data.get("entities", []))
-                    section_relations.extend(data.get("relations", []))
+                    block_entities.extend(data.get("entities", []))
+                    block_relations.extend(data.get("relations", []))
                 except (json.JSONDecodeError, Exception) as e:
-                    logger.warning(f"LLM extraction failed for section '{header}': {e}. Using heuristics.")
-                    fallback = self._heuristic_extraction(content)
-                    section_entities.extend(fallback.get("entities", []))
-                    section_relations.extend(fallback.get("relations", []))
+                    logger.warning(f"LLM extraction failed for block: {e}. Using heuristics.")
+                    fallback = self._heuristic_extraction(text_block)
+                    block_entities.extend(fallback.get("entities", []))
+                    block_relations.extend(fallback.get("relations", []))
+            return block_entities, block_relations
 
-            # Always add the section node and link it to the document
-            section_entities.append({
-                "id": f"{doc_title}::{header}",
-                "label": "Section",
-                "properties": {"name": header, "document": doc_title}
-            })
-            section_relations.append({
-                "source": doc_title,
-                "target": f"{doc_title}::{header}",
-                "type": "HAS_SECTION",
-                "properties": {}
-            })
-            
-            return section_entities, section_relations
-
-        tasks = [process_section(section) for section in sections]
+        tasks = [process_block(block) for block in text_blocks]
         results = await asyncio.gather(*tasks)
         
-        for section_entities, section_relations in results:
-            all_entities.extend(section_entities)
-            all_relations.extend(section_relations)
+        for block_entities, block_relations in results:
+            all_entities.extend(block_entities)
+            all_relations.extend(block_relations)
 
         return {
             "entities": self._deduplicate_entities(all_entities),
