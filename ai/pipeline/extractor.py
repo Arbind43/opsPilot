@@ -88,6 +88,7 @@ class KnowledgeExtractor:
 
     async def _extract_async(self, parsed_doc: Dict[str, Any]) -> Dict[str, Any]:
         """Async version of extract."""
+        import asyncio
         all_entities = []
         all_relations = []
 
@@ -100,45 +101,61 @@ class KnowledgeExtractor:
 
         sections = parsed_doc.get("sections", [])
         chain = self._get_chain()
+        
+        semaphore = asyncio.Semaphore(5)
 
-        for section in sections:
+        async def process_section(section):
             header = section.get("header", "Section")
             content = section.get("content", "")
+            
+            section_entities = []
+            section_relations = []
+            
             if not content or len(content) < 50:
-                continue
+                return section_entities, section_relations
 
             # Truncate very long sections to fit token limits
             text_chunk = content[:3000]
 
-            try:
-                raw = await chain.ainvoke({"text": text_chunk})
-                # Clean the response — sometimes model wraps in ```json
-                raw = raw.strip()
-                if raw.startswith("```"):
-                    raw = raw.split("```")[1]
-                    if raw.startswith("json"):
-                        raw = raw[4:]
-                data = json.loads(raw)
-                all_entities.extend(data.get("entities", []))
-                all_relations.extend(data.get("relations", []))
-            except (json.JSONDecodeError, Exception) as e:
-                logger.warning(f"LLM extraction failed for section '{header}': {e}. Using heuristics.")
-                fallback = self._heuristic_extraction(content)
-                all_entities.extend(fallback.get("entities", []))
-                all_relations.extend(fallback.get("relations", []))
+            async with semaphore:
+                try:
+                    raw = await chain.ainvoke({"text": text_chunk})
+                    # Clean the response — sometimes model wraps in ```json
+                    raw = raw.strip()
+                    if raw.startswith("```"):
+                        raw = raw.split("```")[1]
+                        if raw.startswith("json"):
+                            raw = raw[4:]
+                    data = json.loads(raw)
+                    section_entities.extend(data.get("entities", []))
+                    section_relations.extend(data.get("relations", []))
+                except (json.JSONDecodeError, Exception) as e:
+                    logger.warning(f"LLM extraction failed for section '{header}': {e}. Using heuristics.")
+                    fallback = self._heuristic_extraction(content)
+                    section_entities.extend(fallback.get("entities", []))
+                    section_relations.extend(fallback.get("relations", []))
 
             # Always add the section node and link it to the document
-            all_entities.append({
+            section_entities.append({
                 "id": f"{doc_title}::{header}",
                 "label": "Section",
                 "properties": {"name": header, "document": doc_title}
             })
-            all_relations.append({
+            section_relations.append({
                 "source": doc_title,
                 "target": f"{doc_title}::{header}",
                 "type": "HAS_SECTION",
                 "properties": {}
             })
+            
+            return section_entities, section_relations
+
+        tasks = [process_section(section) for section in sections]
+        results = await asyncio.gather(*tasks)
+        
+        for section_entities, section_relations in results:
+            all_entities.extend(section_entities)
+            all_relations.extend(section_relations)
 
         return {
             "entities": self._deduplicate_entities(all_entities),

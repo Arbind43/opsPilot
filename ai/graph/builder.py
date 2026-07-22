@@ -35,46 +35,46 @@ class GraphBuilder:
         logger.info(f"Updating graph with {len(entities)} nodes and {len(relations)} edges.")
 
         try:
-            # We execute node creation sequentially to avoid deadlocks
+            from collections import defaultdict
+            
+            # Batch node creation grouped by label
+            entities_by_label = defaultdict(list)
             for entity in entities:
                 label = entity.get("label", "Entity")
-                node_id = entity.get("id")
-                props = entity.get("properties", {})
-                
-                # Cypher injection safety: labels must be alphanumeric
                 clean_label = "".join(c for c in label if c.isalnum()) or "Entity"
-                
-                query = f"""
-                MERGE (n:{clean_label} {{id: $id}})
-                SET n += $props, n.last_updated = timestamp()
-                RETURN n
-                """
-                
-                # In Neo4j we generally pass parameters for security and caching
-                await self.client.execute_query(query, parameters={"id": node_id, "props": props})
-
-            # Execute relation creation
-            for rel in relations:
-                source = rel.get("source")
-                target = rel.get("target")
-                rel_type = rel.get("type", "RELATED_TO")
-                props = rel.get("properties", {})
-                
-                # Cypher injection safety
-                clean_type = "".join(c for c in rel_type.upper() if c.isalnum() or c == '_') or "RELATED_TO"
-                
-                query = f"""
-                MATCH (s {{id: $source_id}})
-                MATCH (t {{id: $target_id}})
-                MERGE (s)-[r:{clean_type}]->(t)
-                SET r += $props, r.last_updated = timestamp()
-                """
-                
-                await self.client.execute_query(query, parameters={
-                    "source_id": source,
-                    "target_id": target,
-                    "props": props
+                entities_by_label[clean_label].append({
+                    "id": entity.get("id"),
+                    "props": entity.get("properties", {})
                 })
+
+            for label, batch in entities_by_label.items():
+                query = f"""
+                UNWIND $batch AS row
+                MERGE (n:{label} {{id: row.id}})
+                SET n += row.props, n.last_updated = timestamp()
+                """
+                await self.client.execute_query(query, parameters={"batch": batch})
+
+            # Batch relation creation grouped by type
+            relations_by_type = defaultdict(list)
+            for rel in relations:
+                rel_type = rel.get("type", "RELATED_TO")
+                clean_type = "".join(c for c in rel_type.upper() if c.isalnum() or c == '_') or "RELATED_TO"
+                relations_by_type[clean_type].append({
+                    "source_id": rel.get("source"),
+                    "target_id": rel.get("target"),
+                    "props": rel.get("properties", {})
+                })
+
+            for rel_type, batch in relations_by_type.items():
+                query = f"""
+                UNWIND $batch AS row
+                MATCH (s {{id: row.source_id}})
+                MATCH (t {{id: row.target_id}})
+                MERGE (s)-[r:{rel_type}]->(t)
+                SET r += row.props, r.last_updated = timestamp()
+                """
+                await self.client.execute_query(query, parameters={"batch": batch})
                 
             logger.info("Graph update complete.")
             return True
